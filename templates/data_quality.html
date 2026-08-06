@@ -1,0 +1,86 @@
+<!doctype html><html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مركز جودة البيانات — Shalfa Ops</title><link rel="stylesheet" href="/static/style.css">
+<link rel="manifest" href="/static/manifest.webmanifest"><meta name="theme-color" content="#082b60">
+</head><body><div class="app-layout"><aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside><section class="content">
+<header class="approved-topbar"><div class="topbar-title"><h1>مركز جودة البيانات</h1>
+<p>متابعة اكتمال بيانات المدارس والبوابين والمنسقين والإحداثيات.</p></div></header>
+
+<div class="data-quality-kpis">
+<article><small>إجمالي المدارس</small><b>{{stats.total_schools or 0}}</b></article>
+<article><small>بدون بواب</small><b>{{stats.no_guard or 0}}</b></article>
+<article><small>بدون منسق</small><b>{{no_coord_count or 0}}</b></article>
+<article><small>بدون إحداثيات</small><b>{{stats.no_coordinates or 0}}</b></article>
+<article><small>بوابون غير مرتبطين</small><b>{{unlinked or 0}}</b></article>
+<article><small>بوابون مرتبطون بأكثر من مدرسة</small><b>{{duplicate_guards or 0}}</b></article>
+</div>
+
+<div class="quality-actions">
+<a href="/coordinates">📍 معالجة الإحداثيات</a>
+<a href="/unlinked-guards">👤 إدارة وربط البوابين</a>
+<a href="/coordinators">👥 إدارة المنسقين</a>
+<a href="/downloads/v15-review">📊 تحميل تقرير المراجعة</a>
+<a href="/downloads/v15-import">📥 تحميل ملف التحديث المعتمد</a>
+</div>
+
+<div class="quality-grid">
+<article class="panel">
+<h3>مدارس بدون منسق أو باسم غير متوفر <span>{{no_coord_count}}</span></h3>
+<div class="quality-table-wrap"><table><thead><tr><th>الرقم الوزاري</th><th>المدرسة</th><th>المدينة</th><th>البواب</th></tr></thead><tbody>
+{% for r in no_coord_rows %}<tr><td>{{r.ministry_id}}</td><td>{{r.school_name}}</td><td>{{r.city}}</td><td>{{r.guard_name or '—'}}</td></tr>
+{% else %}<tr><td colspan="4">لا توجد مدارس بدون منسق.</td></tr>{% endfor %}</tbody></table></div>
+</article>
+
+<article class="panel">
+<h3>مدارس بدون إحداثيات <span>{{stats.no_coordinates or 0}}</span></h3>
+<div class="quality-table-wrap"><table><thead><tr><th>الرقم الوزاري</th><th>المدرسة</th><th>المدينة</th><th>المنسق</th></tr></thead><tbody>
+{% for r in no_coords_rows %}<tr><td>{{r.ministry_id}}</td><td>{{r.school_name}}</td><td>{{r.city}}</td><td>{{r.coordinator_name or '—'}}</td></tr>
+{% else %}<tr><td colspan="4">جميع المدارس تحتوي على إحداثيات.</td></tr>{% endfor %}</tbody></table></div>
+</article>
+
+<article class="panel full-quality-panel">
+<h3>بوابون على رأس العمل وغير مرتبطين <span>{{unlinked}}</span></h3>
+<div class="quality-table-wrap"><table><thead><tr><th>الرقم الوظيفي</th><th>اسم البواب</th><th>الهوية</th><th>الجوال</th><th>الحالة</th></tr></thead><tbody>
+{% for r in unlinked_rows %}<tr><td>{{r.emp_id}}</td><td>{{r.emp_name}}</td><td>{{r.id_no or '—'}}</td><td>{{r.mobile or '—'}}</td><td>{{r.service_status or 'على رأس العمل'}}</td></tr>
+{% else %}<tr><td colspan="5">لا يوجد بوابون غير مرتبطين.</td></tr>{% endfor %}</tbody></table></div>
+</article>
+</div>
+</section></div><script src="/static/pwa.js" defer></script></body></html>

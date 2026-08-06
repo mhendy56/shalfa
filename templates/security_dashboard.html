@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مركز قيادة المشروع — Shalfa Ops</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#06172e">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+</head>
+<body class="command-center-body">
+<div class="cc-shell" id="commandCenter">
+  <header class="cc-global-bar">
+    <div class="cc-brand">
+      <img src="/static/shalfa-logo.png" alt="شلفا">
+      <div><b>مركز قيادة المشروع</b><small>Shalfa Operations Command Center</small></div>
+    </div>
+    <div class="cc-global-status">
+      <span class="cc-status online"><i></i> النظام متصل</span>
+      <span class="cc-status"><i></i> قاعدة البيانات جاهزة</span>
+      <span>👥 <b id="activeUsers">0</b> حساب نشط</span>
+      <span>🔄 آخر تحديث: <b id="lastUpdate">—</b></span>
+      <span class="cc-clock"><b id="liveTime">--:--:--</b><small id="liveDate">—</small></span>
+    </div>
+    <div class="cc-actions">
+      <input type="date" id="workDate" value="{{work_date}}">
+      <button type="button" onclick="refreshCenter(true)" title="تحديث">↻</button>
+      <button type="button" onclick="toggleSound()" id="soundBtn" title="الصوت">🔔</button>
+      <button type="button" onclick="toggleEmergency()" id="emergencyBtn" class="emergency-btn">🚨 طوارئ</button>
+      <button type="button" onclick="toggleFullscreen()" title="ملء الشاشة">⛶</button>
+      <button type="button" onclick="window.print()" title="طباعة / PDF">🖨</button>
+      <a href="/export.xlsx?work_date={{work_date}}" title="تصدير Excel">⬇ Excel</a>
+      <a href="/home" title="الرئيسية">⌂</a>
+    </div>
+  </header>
+
+  <section class="cc-health-strip">
+    <article class="cc-health-card">
+      <div class="health-ring" id="healthRing"><strong id="healthScore">0</strong><small>/100</small></div>
+      <div><b>مؤشر صحة المشروع</b><span id="healthLabel">جاري التحليل...</span></div>
+    </article>
+    <div class="cc-kpi-marquee" id="kpiStrip"></div>
+  </section>
+
+  <main class="cc-main-grid">
+    <aside class="cc-alerts-panel cc-panel" id="alertsPanel">
+      <div class="cc-panel-head"><div><h2>مركز التنبيهات</h2><small>مرتبة حسب درجة الخطورة</small></div><b class="cc-count" id="alertsCount">0</b></div>
+      <div class="cc-alert-filters"><button class="active" data-alert-filter="all">الكل</button><button data-alert-filter="حرج">حرج</button><button data-alert-filter="مرتفع">مرتفع</button><button data-alert-filter="متوسط">متوسط</button></div>
+      <div class="cc-alert-list" id="alertsList"></div>
+    </aside>
+
+    <section class="cc-map-panel cc-panel">
+      <div class="cc-panel-head">
+        <div><h2>الخريطة الحية للمشروع</h2><small id="mapSummary">حالة المدارس لحظيًا</small></div>
+        <div class="cc-map-tools">
+          <input id="mapSearch" placeholder="بحث بالمدرسة أو الرقم الوزاري">
+          <select id="cityFilter"><option value="">كل المدن</option></select>
+          <select id="mapStatusFilter"><option value="">كل الحالات</option><option>مستقر</option><option>تنبيه</option><option>حرج</option></select>
+        </div>
+      </div>
+      <div class="cc-map-legend"><span class="stable">● مستقر</span><span class="warning">● تنبيه</span><span class="critical">● حرج</span><span class="missing">● لم يسجل</span></div>
+      <div id="commandMap"></div>
+    </section>
+
+    <aside class="cc-kpis-panel cc-panel">
+      <div class="cc-panel-head"><div><h2>الأداء المباشر</h2><small>مؤشرات تشغيل اليوم</small></div></div>
+      <div class="cc-primary-kpis" id="primaryKpis"></div>
+      <div class="cc-progress-list" id="progressList"></div>
+      <div class="cc-quick-actions">
+        <a href="/dashboard">الحضور</a><a href="/incidents">البلاغات</a><a href="/guard-tours">الجولات</a><a href="/access-permits">التصاريح</a><a href="/documents">المستندات</a><a href="/data-quality">جودة البيانات</a>
+      </div>
+    </aside>
+  </main>
+
+  <section class="cc-secondary-grid">
+    <article class="cc-panel cc-live-feed">
+      <div class="cc-panel-head"><div><h2>الأحداث المباشرة</h2><small>آخر العمليات المسجلة في النظام</small></div><span class="live-dot">LIVE</span></div>
+      <div id="liveFeed"></div>
+    </article>
+
+    <article class="cc-panel cc-coordinators">
+      <div class="cc-panel-head"><div><h2>أداء المنسقين / المشرفين</h2><small>الأقل أداءً يظهر أولًا</small></div><a href="/coordinators">إدارة التوزيع</a></div>
+      <div class="cc-coordinator-list" id="coordinatorList"></div>
+    </article>
+
+    <article class="cc-panel cc-operations-summary">
+      <div class="cc-panel-head"><div><h2>البلاغات والجولات والتصاريح</h2><small>حالة التنفيذ والاستجابة</small></div></div>
+      <div class="cc-ops-grid" id="opsGrid"></div>
+      <div class="cc-risk-box"><h3>أعلى المخاطر الحالية</h3><div id="topRisks"></div></div>
+    </article>
+
+    <article class="cc-panel cc-data-quality">
+      <div class="cc-panel-head"><div><h2>جودة البيانات والموارد البشرية</h2><small>النواقص التي تؤثر على التشغيل</small></div><a href="/data-quality">فتح المركز</a></div>
+      <div class="cc-quality-grid" id="qualityGrid"></div>
+      <div class="cc-doc-warning"><b>المستندات التي تنتهي خلال 30 يومًا</b><strong id="expiringDocs">0</strong></div>
+    </article>
+  </section>
+
+  <section class="cc-assistant-bar">
+    <div><span>✨</span><b>مساعد شلفا التشغيلي</b><small>اختصارات للاستعلام والتحرك السريع</small></div>
+    <div class="cc-assistant-actions"><a href="/data-quality">المدارس بدون بواب</a><a href="/dashboard?status_filter=لم يسجل">من لم يسجل اليوم؟</a><a href="/incidents?status=مفتوح">البلاغات المفتوحة</a><a href="/documents">المستندات الناقصة</a></div>
+  </section>
+
+  <footer class="cc-ticker"><b>مباشر</b><div class="ticker-viewport"><div id="tickerTrack"></div></div></footer>
+</div>
+
+<div class="cc-school-drawer" id="schoolDrawer">
+  <button class="drawer-close" onclick="closeDrawer()">×</button>
+  <div id="drawerContent"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const initialPayload={{payload|tojson}};
+let state=initialPayload, map, markersLayer, soundEnabled=false, emergencyMode=false, currentAlertFilter='all';
+
+function esc(v){return String(v??'—').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
+function fmtTime(v){if(!v)return '—';try{return new Date(v).toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});}catch{return v;}}
+function number(v){return new Intl.NumberFormat('ar-SA').format(Number(v||0));}
+function healthClass(score){return score>=85?'excellent':score>=70?'good':score>=50?'watch':'danger';}
+function healthText(score){return score>=85?'ممتاز — المشروع مستقر':score>=70?'جيد — توجد ملاحظات محدودة':score>=50?'يحتاج متابعة تشغيلية':'حالة حرجة — يلزم تدخل فوري';}
+
+function initMap(){
+ map=L.map('commandMap',{zoomControl:true,attributionControl:false}).setView([26.1,43.9],8);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+ markersLayer=L.layerGroup().addTo(map);
+ document.getElementById('mapSearch').addEventListener('input',renderMap);
+ document.getElementById('cityFilter').addEventListener('change',renderMap);
+ document.getElementById('mapStatusFilter').addEventListener('change',renderMap);
+}
+function markerColor(p){if(p.project_status==='حرج')return '#ef4444';if(p.project_status==='تنبيه')return '#f59e0b';if(p.attendance_status==='لم يسجل')return '#64748b';return '#22c55e';}
+function renderMap(){
+ markersLayer.clearLayers();const q=document.getElementById('mapSearch').value.trim().toLowerCase();const city=document.getElementById('cityFilter').value;const st=document.getElementById('mapStatusFilter').value;
+ const filtered=state.map_points.filter(p=>(!q||String(p.school_name).toLowerCase().includes(q)||String(p.ministry_id).includes(q))&&(!city||p.city===city)&&(!st||p.project_status===st));
+ const bounds=[];filtered.forEach(p=>{const color=markerColor(p);const marker=L.circleMarker([p.latitude,p.longitude],{radius:7+Math.min(8,p.risk_score/12),color:'#fff',weight:2,fillColor:color,fillOpacity:.9});marker.bindTooltip(`<b>${esc(p.school_name)}</b><br>${esc(p.city)} — ${esc(p.attendance_status)}`);marker.on('click',()=>openDrawer(p));marker.addTo(markersLayer);bounds.push([p.latitude,p.longitude]);});
+ document.getElementById('mapSummary').textContent=`${number(filtered.length)} موقع ظاهر من ${number(state.map_points.length)}`;
+ if(bounds.length&&filtered.length<state.map_points.length)map.fitBounds(bounds,{padding:[25,25]});
+}
+function openDrawer(p){
+ const tel=(p.guard_mobile||'').replace(/\D/g,'');const coordTel=(p.coordinator_mobile||'').replace(/\D/g,'');
+ document.getElementById('drawerContent').innerHTML=`<div class="drawer-status ${p.project_status}">${esc(p.project_status)} — مخاطرة ${number(p.risk_score)}%</div><h2>${esc(p.school_name)}</h2><p class="drawer-sub">وزاري: ${esc(p.ministry_id)} · ${esc(p.city)} · ${esc(p.district)}</p>
+ <div class="drawer-grid"><span>حالة الحضور<b>${esc(p.attendance_status)}</b></span><span>وقت التسجيل<b>${fmtTime(p.attendance_time)}</b></span><span>البواب<b>${esc(p.guard_name||'غير مرتبط')}</b></span><span>المنسق / المشرف<b>${esc(p.coordinator_name||'غير متوفر')}</b></span><span>بلاغات مفتوحة<b>${number(p.open_incidents)}</b></span><span>تصاريح نشطة<b>${number(p.active_permits)}</b></span><span>مخالفات اليوم<b>${number(p.violations_today)}</b></span><span>آخر جولة<b>${esc(p.last_tour_date)}</b></span></div>
+ <div class="drawer-actions">${tel?`<a href="tel:${tel}">📞 اتصال بالبواب</a><a target="_blank" href="https://wa.me/${tel}">💬 واتساب البواب</a>`:''}${coordTel?`<a href="tel:${coordTel}">📞 اتصال بالمنسق</a>`:''}<a target="_blank" href="https://www.google.com/maps?q=${p.latitude},${p.longitude}">📍 Google Maps</a><a href="/schools/${encodeURIComponent(p.ministry_id)}/card.pdf" target="_blank">🖨 بطاقة المدرسة</a></div>`;
+ document.getElementById('schoolDrawer').classList.add('open');
+}
+function closeDrawer(){document.getElementById('schoolDrawer').classList.remove('open');}
+function openDrawerById(id){const p=state.map_points.find(x=>String(x.ministry_id)===String(id));if(p)openDrawer(p);}
+
+function renderKpis(){
+ document.getElementById('activeUsers').textContent=number(state.totals.users);
+ const hs=state.health_score;document.getElementById('healthScore').textContent=hs;document.getElementById('healthLabel').textContent=healthText(hs);document.getElementById('healthRing').className='health-ring '+healthClass(hs);document.getElementById('healthRing').style.setProperty('--score',hs*3.6+'deg');
+ const delta=(state.coverage-state.yesterday_coverage).toFixed(1);const kpis=[['🏫','المدارس العاملة',state.totals.schools,''],['👮','البوابون',state.totals.guards,''],['👥','المنسقون / المشرفون',state.totals.coordinators,''],['✅','الحضور',state.attendance['حاضر'],state.coverage+'%'],['❌','الغياب',state.attendance['غائب'],''],['◌','لم يسجل',state.attendance['لم يسجل'],''],['🚨','بلاغات مفتوحة',state.operations.open_incidents,''],['🛡','الجولات اليوم',state.operations.tours_today,state.rates.tour_rate+'%'],['🚪','فرق داخل المدارس',state.operations.teams_inside,''],['⚠','مخالفات اليوم',state.operations.violations_today,'']];
+ document.getElementById('kpiStrip').innerHTML=kpis.map(x=>`<article><span>${x[0]}</span><small>${x[1]}</small><b>${number(x[2])}</b><em>${x[3]}</em></article>`).join('');
+ const primary=[['coverage','نسبة التغطية',state.coverage,'%' ,delta>=0?'up':'down',`${delta>=0?'+':''}${delta}% عن الأمس`],['absent','الغياب',state.attendance['غائب'],'','danger','مدرسة'],['unrecorded','لم يسجل',state.attendance['لم يسجل'],'','muted','مدرسة'],['critical','تنبيهات حرجة',state.alerts.filter(a=>!a.handled&&a.severity==='حرج').length,'','danger','تنبيه']];
+ document.getElementById('primaryKpis').innerHTML=primary.map(x=>`<article class="${x[4]}"><small>${x[1]}</small><b>${number(x[2])}${x[3]}</b><em>${x[5]}</em></article>`).join('');
+ const progress=[['اكتمال التسجيل',state.recording],['تنفيذ الجولات',state.rates.tour_rate],['جودة البيانات',state.rates.data_quality],['اكتمال المستندات',state.rates.docs_health]];
+ document.getElementById('progressList').innerHTML=progress.map(x=>`<div><span>${x[0]}<b>${x[1]}%</b></span><i><u style="width:${Math.max(0,Math.min(100,x[1]))}%"></u></i></div>`).join('');
+}
+function renderAlerts(){
+ const items=state.alerts.filter(a=>(currentAlertFilter==='all'||a.severity===currentAlertFilter)&&!a.handled);document.getElementById('alertsCount').textContent=number(items.length);
+ document.getElementById('alertsList').innerHTML=items.length?items.map(a=>`<article class="cc-alert ${a.severity}"><div class="alert-icon">${a.severity==='حرج'?'🚨':a.kind==='حضور'?'⏱':a.kind==='تصاريح'?'🚪':a.kind==='المستندات'?'🪪':'⚠'}</div><div><span>${esc(a.severity)} · ${esc(a.kind)}</span><b>${esc(a.title)}</b><p>${esc(a.detail)}</p><div><a href="${a.url}">فتح التفاصيل</a><button onclick="handleAlert('${esc(a.key)}')">تمت المعالجة</button></div></div></article>`).join(''):'<div class="cc-empty">لا توجد تنبيهات ضمن الفلتر الحالي.</div>';
+}
+async function handleAlert(key){const fd=new FormData();fd.append('alert_key',key);fd.append('status','تمت المعالجة');const r=await fetch('/command-center/alerts/action',{method:'POST',body:fd});if(r.ok){const a=state.alerts.find(x=>x.key===key);if(a)a.handled=true;renderAlerts();}}
+function renderFeed(){
+ document.getElementById('liveFeed').innerHTML=state.events.slice(0,18).map(e=>`<article><time>${fmtTime(e.ts)}</time><span class="event-${e.event_type}">${esc(e.event_type)}</span><div><b>${esc(e.title)}</b><small>${esc(e.city)} · ${esc(e.detail)}</small></div></article>`).join('')||'<div class="cc-empty">لا توجد أحداث حديثة.</div>';
+ const ticker=state.events.slice(0,12).map(e=>`<span><b>${esc(e.event_type)}</b> ${esc(e.title)} — ${esc(e.detail)}</span>`).join('');document.getElementById('tickerTrack').innerHTML=ticker+ticker;
+}
+function renderCoordinators(){
+ document.getElementById('coordinatorList').innerHTML=state.coordinators.slice(0,14).map(c=>`<article class="${c.score<55?'low':c.score<75?'medium':'high'}"><div class="coord-score">${number(c.score)}</div><div><b>${esc(c.name)}</b><small>${esc(c.city)} · ${number(c.schools)} مدرسة</small><div class="coord-metrics"><span>تغطية ${c.coverage}%</span><span>غير مسجل ${number(c.unrecorded)}</span><span>جولات ${number(c.tours)}</span><span>بلاغات ${number(c.incidents)}</span></div></div>${c.phone?`<a href="tel:${c.phone}">📞</a>`:''}</article>`).join('');
+}
+function renderOperations(){
+ const o=state.operations;const ops=[['🚨','بلاغات مفتوحة',o.open_incidents,'/incidents'],['🔥','بلاغات حرجة',o.critical_incidents,'/incidents'],['🛡','الجولات اليوم',o.tours_today,'/guard-tours'],['🚪','فرق داخل المدارس',o.teams_inside,'/access-permits'],['⌛','تصاريح انتظار',o.pending_permits,'/access-permits'],['⛔','مغادرة متأخرة',o.overdue_exits,'/access-permits'],['⚠','المخالفات اليوم',o.violations_today,'/violations'],['👥','العجز',o.shortages,'/shifts']];
+ document.getElementById('opsGrid').innerHTML=ops.map(x=>`<a href="${x[3]}"><span>${x[0]}</span><small>${x[1]}</small><b>${number(x[2])}</b></a>`).join('');
+ const risks=[...state.map_points].sort((a,b)=>b.risk_score-a.risk_score).slice(0,6);document.getElementById('topRisks').innerHTML=risks.map(p=>`<button class="risk-school-btn" data-id="${esc(p.ministry_id)}"><span>${esc(p.school_name)}<small>${esc(p.city)}</small></span><b>${number(p.risk_score)}%</b></button>`).join('');document.querySelectorAll('.risk-school-btn').forEach(b=>b.onclick=()=>openDrawerById(b.dataset.id));
+}
+function renderQuality(){
+ const q=state.quality;const rows=[['مدارس بدون بواب',q.no_guard,'/unlinked-guards'],['مدارس بدون منسق / مشرف',q.no_coord,'/coordinators'],['مدارس بدون إحداثيات',q.no_coords,'/coordinates'],['بوابون غير مرتبطين',q.unlinked_guards,'/unlinked-guards'],['مستندات مطلوبة ناقصة',q.missing_docs,'/documents']];
+ document.getElementById('qualityGrid').innerHTML=rows.map(x=>`<a href="${x[2]}"><small>${x[0]}</small><b>${number(x[1])}</b></a>`).join('');document.getElementById('expiringDocs').textContent=number(state.operations.expiring_docs);
+}
+function populateCities(){const sel=document.getElementById('cityFilter'),current=sel.value;const cities=[...new Set(state.map_points.map(p=>p.city).filter(Boolean))].sort();sel.innerHTML='<option value="">كل المدن</option>'+cities.map(c=>`<option>${esc(c)}</option>`).join('');sel.value=current;}
+function renderAll(){renderKpis();renderAlerts();populateCities();renderMap();renderFeed();renderCoordinators();renderOperations();renderQuality();document.getElementById('lastUpdate').textContent=fmtTime(state.generated_at);if(soundEnabled&&state.alerts.some(a=>!a.handled&&a.severity==='حرج'))beep();}
+async function refreshCenter(manual=false){try{const d=document.getElementById('workDate').value;const r=await fetch('/api/command-center?work_date='+encodeURIComponent(d),{cache:'no-store'});if(!r.ok)throw new Error();state=await r.json();renderAll();if(manual)document.querySelector('.cc-global-bar').classList.add('flash'),setTimeout(()=>document.querySelector('.cc-global-bar').classList.remove('flash'),700);}catch(e){document.querySelector('.cc-status.online').classList.add('offline');document.querySelector('.cc-status.online').innerHTML='<i></i> تعذر التحديث';}}
+function toggleEmergency(){emergencyMode=!emergencyMode;document.body.classList.toggle('emergency-mode',emergencyMode);document.getElementById('emergencyBtn').classList.toggle('active',emergencyMode);if(emergencyMode){currentAlertFilter='حرج';renderAlerts();}else{currentAlertFilter='all';renderAlerts();}}
+function toggleFullscreen(){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+function toggleSound(){soundEnabled=!soundEnabled;document.getElementById('soundBtn').textContent=soundEnabled?'🔊':'🔔';}
+function beep(){try{const ctx=new (window.AudioContext||window.webkitAudioContext)(),o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=760;g.gain.value=.05;o.start();setTimeout(()=>{o.stop();ctx.close()},180);}catch{}}
+function clock(){const n=new Date();document.getElementById('liveTime').textContent=n.toLocaleTimeString('ar-SA');document.getElementById('liveDate').textContent=n.toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
+
+document.querySelectorAll('[data-alert-filter]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-alert-filter]').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentAlertFilter=b.dataset.alertFilter;renderAlerts();});
+document.getElementById('workDate').addEventListener('change',()=>refreshCenter(true));
+initMap();renderAll();clock();setInterval(clock,1000);setInterval(()=>refreshCenter(false),30000);
+</script>
+<script src="/static/pwa.js" defer></script>
+</body></html>

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة العميل — Shalfa Ops</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body class="client-dashboard-body">
+<div class="client-dashboard-layout">
+<aside class="client-sidebar">
+  <div class="client-brand">
+    <img src="/static/shalfa-logo.png" alt="شلفا">
+    <div><b>شلفا</b><small>إدارة المرافق</small></div>
+  </div>
+  <nav>
+    <a class="active" href="/client-dashboard">▦ <span>لوحة العميل</span></a>
+    <small>المتابعة</small>
+    <a href="/map">🏫 <span>المدارس والمواقع</span></a>
+    <a href="/period-report">◷ <span>الحضور والانصراف</span></a>
+    <a href="#tours-performance">⌘ <span>الجولات</span></a>
+    <a href="#violations-summary">⚠ <span>المخالفات</span></a>
+    <a href="/reports">◇ <span>العهد والممتلكات</span></a>
+    <a href="/reports">▤ <span>التقارير</span></a>
+    <small>إعدادات العميل</small>
+    <a href="/client-dashboard">♙ <span>حسابي</span></a>
+    <a href="/logout" class="client-logout">↪ <span>تسجيل الخروج</span></a>
+  </nav>
+  <footer>شركة شلفا لإدارة المرافق<br>إعداد وإشراف عام: محمد هندي</footer>
+</aside>
+
+<main class="client-main">
+<header class="client-topbar">
+  <div class="client-page-title">
+    <span class="calendar-icon">▣</span>
+    <div><h1>لوحة العميل</h1><p>نظرة عامة على المدارس والمواقع</p></div>
+  </div>
+  <div class="client-date">{{date_to}}</div>
+  <div class="client-top-actions">
+    <a href="/reports">⬇<small>التقارير</small></a>
+    <a href="/documents">✉<small>الرسائل</small></a>
+    <a href="#latest-alerts">♢<small>الإشعارات</small><em>{{open_incidents}}</em></a>
+  </div>
+  <div class="client-profile">
+    <div><b>أهلًا بك</b><span>{{client_name}}</span><small>● متصل</small></div>
+    <div class="profile-circle">👤</div>
+  </div>
+</header>
+
+<form class="client-filter-bar" method="get">
+  <label>من تاريخ<input type="date" name="date_from" value="{{date_from}}"></label>
+  <label>إلى تاريخ<input type="date" name="date_to" value="{{date_to}}"></label>
+  <label>المدينة<select name="city"><option value="">كل المدن</option>{% for c in cities %}<option value="{{c}}" {% if selected_city==c %}selected{% endif %}>{{c}}</option>{% endfor %}</select></label>
+  <button>تحديث المؤشرات</button>
+</form>
+
+<section class="client-kpi-grid">
+  <article><span class="kpi-icon buildings">🏢</span><small>إجمالي المدارس</small><b>{{school_stats.total_schools or 0}}</b><p>{{school_stats.cities or 0}} مدن</p></article>
+  <article><span class="kpi-icon routes">⌘</span><small>الجولات المكتملة</small><b>{{tours.completed or 0}}</b><p>من أصل {{tours.total or 0}} جولة</p></article>
+  <article><span class="kpi-icon violations">⚠</span><small>المخالفات</small><b>{{violations_count}}</b><p>خلال الفترة المحددة</p></article>
+  <article><span class="kpi-icon compliance">✓</span><small>نسبة الحضور</small><b>{{attendance_pct}}%</b><p>{{attendance.present or 0}} حاضر اليوم</p></article>
+  <article><span class="kpi-icon covered">⌖</span><small>المواقع المغطاة</small><b>{{school_stats.covered_schools or 0}}</b><p>{{coverage_pct}}% من الإجمالي</p></article>
+</section>
+
+<section class="client-dashboard-row three">
+  <article class="client-panel city-chart-panel">
+    <header><h2>توزيع المدارس حسب المدينة</h2></header>
+    <div class="donut-wrap">
+      <div class="donut-chart" style="--coverage:{{coverage_pct}}"><b>{{school_stats.total_schools or 0}}</b><small>إجمالي المدارس</small></div>
+      <div class="city-legend">
+        {% for r in city_distribution %}
+        <div><i style="--i:{{loop.index}}"></i><span>{{r.city}}</span><b>{{r.total}}</b><small>{{((r.total or 0)*100/(school_stats.total_schools or 1))|round(1)}}%</small></div>
+        {% endfor %}
+      </div>
+    </div>
+  </article>
+
+  <article class="client-panel alerts-panel" id="latest-alerts">
+    <header><h2>أحدث التنبيهات</h2><a href="/reports">عرض التقارير</a></header>
+    <div class="alerts-list">
+      {% for a in alerts %}
+      <div class="alert-item {{a.event_type}}">
+        <span class="alert-symbol">{% if a.event_type=='violation' %}⚠{% elif a.event_type=='incident' %}!{% else %}✓{% endif %}</span>
+        <div><b>{{a.message}}</b><small>{{a.title}} — {{a.city}}</small></div>
+        <time>{{a.event_date}}</time>
+      </div>
+      {% else %}<p class="empty-state">لا توجد تنبيهات خلال الفترة.</p>{% endfor %}
+    </div>
+  </article>
+
+  <article class="client-panel map-panel">
+    <header><h2>خريطة المواقع</h2><a href="/map">عرض الخريطة الكاملة</a></header>
+    <div id="clientMiniMap"></div>
+  </article>
+</section>
+
+<section class="client-dashboard-row three">
+  <article class="client-panel trend-panel">
+    <header><h2>الحضور اليومي</h2><a href="/period-report">عرض التقرير</a></header>
+    <div class="client-line-chart" id="attendanceChart"></div>
+  </article>
+
+  <article class="client-panel violation-chart-panel" id="violations-summary">
+    <header><h2>المخالفات حسب النوع</h2><a href="/reports">عرض التقرير</a></header>
+    <div class="violation-donut-area">
+      <div class="violation-donut"><b>{{violations_count}}</b><small>إجمالي المخالفات</small></div>
+      <div class="violation-legend">
+        {% for r in violation_types %}<div><i></i><span>{{r.label}}</span><b>{{r.total}}</b></div>{% else %}<small>لا توجد مخالفات</small>{% endfor %}
+      </div>
+    </div>
+  </article>
+
+  <article class="client-panel tours-performance" id="tours-performance">
+    <header><h2>أداء الجولات</h2></header>
+    <div class="progress-ring" style="--value:{{tours_pct}}"><div><b>{{tours_pct}}%</b><small>نسبة إنجاز الجولات</small></div></div>
+    <ul>
+      <li><span>إجمالي الجولات</span><b>{{tours.total or 0}}</b></li>
+      <li><span>الجولات المكتملة</span><b>{{tours.completed or 0}}</b></li>
+      <li><span>جولات لم تكتمل</span><b>{{tours.pending or 0}}</b></li>
+      <li><span>بلاغات مفتوحة</span><b>{{open_incidents}}</b></li>
+    </ul>
+  </article>
+</section>
+
+<section class="client-bottom-row">
+  <article class="client-panel visits-panel">
+    <header><h2>أحدث الزيارات</h2></header>
+    <div class="client-table-wrap">
+      <table>
+        <thead><tr><th>المدرسة</th><th>المدينة</th><th>التاريخ والوقت</th><th>الحالة</th><th>المنفذ</th></tr></thead>
+        <tbody>
+        {% for v in latest_visits %}
+        <tr><td>{{v.school_name}}</td><td>{{v.city}}</td><td>{{v.tour_date}} - {{v.visit_time_display}}</td><td><span class="visit-status">{{v.status}}</span></td><td>{{v.recorded_by or '—'}}</td></tr>
+        {% else %}<tr><td colspan="5">لا توجد زيارات خلال الفترة.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="client-panel shortcuts-panel">
+    <header><h2>اختصارات العميل</h2></header>
+    <div>
+      <a href="/reports">📗<span>التقارير</span></a>
+      <a href="/map">🏢<span>المدارس والمواقع</span></a>
+      <a href="/period-report">👥<span>الحضور اليومي</span></a>
+      <a href="#violations-summary">⚠<span>المخالفات</span></a>
+    </div>
+  </article>
+</section>
+</main>
+</div>
+
+<script>
+const schools={{map_schools|tojson}};
+if(document.getElementById('clientMiniMap')){
+  const m=L.map('clientMiniMap',{zoomControl:true,attributionControl:false}).setView([26.35,43.95],8);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(m);
+  const bounds=[];
+  schools.slice(0,600).forEach((s,i)=>{
+    const color=['#176fe5','#22a35a','#f5a623','#7448d7'][i%4];
+    const marker=L.circleMarker([s.latitude,s.longitude],{radius:7,fillColor:color,color:'#fff',weight:2,fillOpacity:.9})
+      .addTo(m).bindTooltip(`${s.school_name}<br>${s.city}`,{direction:'top'});
+    bounds.push([s.latitude,s.longitude]);
+  });
+  if(bounds.length)m.fitBounds(bounds,{padding:[15,15],maxZoom:10});
+}
+const trend={{attendance_trend|tojson}};
+const chart=document.getElementById('attendanceChart');
+if(chart){
+  if(!trend.length){chart.innerHTML='<p class="empty-state">لا توجد بيانات حضور للفترة.</p>'}
+  else{
+    const max=Math.max(...trend.map(x=>Number(x.present||0)),1);
+    const pts=trend.map((x,i)=>{
+      const px=20+(i*(560/Math.max(trend.length-1,1)));
+      const py=190-(Number(x.present||0)/max*150);
+      return `${px},${py}`;
+    }).join(' ');
+    chart.innerHTML=`<svg viewBox="0 0 600 220" preserveAspectRatio="none">
+      <line x1="20" y1="190" x2="580" y2="190" stroke="#e5ebf3"/>
+      <polyline points="${pts}" fill="none" stroke="#176fe5" stroke-width="4"/>
+      ${trend.map((x,i)=>{const px=20+(i*(560/Math.max(trend.length-1,1))),py=190-(Number(x.present||0)/max*150);return `<circle cx="${px}" cy="${py}" r="5" fill="#176fe5"><title>${x.work_date}: ${x.present||0}</title></circle>`}).join('')}
+    </svg><div class="chart-labels">${trend.slice(-7).map(x=>`<span>${x.work_date.slice(5)}</span>`).join('')}</div>`;
+  }
+}
+</script>
+<script src="/static/pwa.js" defer></script>
+</body></html>

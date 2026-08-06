@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الخريطة التفاعلية — Shalfa Ops</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shalfa Ops">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+</head>
+<body>
+<div class="app-layout">
+<aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside>
+<section class="content map-page-content">
+<header class="approved-topbar map-topbar">
+  <div class="topbar-title">
+    <h1>الخريطة التفاعلية</h1>
+    <p>اضغط على المدرسة لعرض بطاقة البيانات الكاملة.</p>
+  </div>
+  <div class="map-live-counter"><small>المدارس الظاهرة</small><b id="visibleCount">0</b></div>
+</header>
+
+<div class="map-toolbar">
+  <input id="schoolSearch" type="search" placeholder="اسم المدرسة أو الرقم الوزاري أو البواب أو المنسق">
+  <select id="cityFilter"><option value="">كل المناطق</option></select>
+  <select id="typeFilter"><option value="">كل الأنواع</option><option value="رئيسية">الرئيسية</option><option value="فرعية">الفرعية</option><option value="ملحقة">الملحقة</option></select>
+  <select id="guardFilter"><option value="">كل حالات البواب</option><option value="linked">بها بواب</option><option value="unlinked">بدون بواب</option></select>
+  <button id="clearMapFilters" type="button">مسح البحث</button>
+</div>
+<div id="searchResults" class="map-search-results"></div>
+<div id="dynamicLeafletMap" class="dynamic-leaflet-map"></div>
+
+<div id="schoolCardModal" class="school-card-modal" aria-hidden="true">
+  <div class="school-card-backdrop" onclick="closeSchoolCard()"></div>
+  <div class="school-card-dialog">
+    <button class="school-card-close" onclick="closeSchoolCard()" aria-label="إغلاق">×</button>
+    <div id="schoolCardContent"></div>
+  </div>
+</div>
+
+<script>
+const map=L.map('dynamicLeafletMap',{zoomControl:true}).setView([26.35,43.95],8);
+const baseLayers={
+  "خريطة مبسطة":L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:20}),
+  "OpenStreetMap":L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19})
+};
+baseLayers["خريطة مبسطة"].addTo(map);
+L.control.layers(baseLayers).addTo(map);
+const cluster=L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:55,spiderfyOnMaxZoom:true,showCoverageOnHover:false});
+map.addLayer(cluster);
+
+let schoolsData=[],filteredSchools=[],markerByMinistry=new Map();
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function display(v,fallback='—'){const x=String(v??'').trim();return x?esc(x):fallback;}
+function cleanPhone(v){return String(v||'').replace(/[^0-9+]/g,'');}
+function whatsappPhone(v){
+  let p=cleanPhone(v).replace(/^00/,'+');
+  if(p.startsWith('05')) p='+966'+p.slice(1);
+  if(p.startsWith('5')) p='+966'+p;
+  return p.replace('+','');
+}
+function yesNo(v){const x=String(v||'').trim().toLowerCase();if(['نعم','yes','1','true'].includes(x))return '<b class="yes-value">نعم</b>';if(['لا','no','0','false'].includes(x))return '<b class="no-value">لا</b>';return '—';}
+
+function markerColor(s){
+  const type=s.operational_type||s.school_type||'',female=String(s.gender||'').includes('بنات');
+  if(type.includes('ملحقة'))return '#f59e0b';
+  if(type.includes('فرعية'))return female?'#ec4899':'#0ea5e9';
+  return female?'#d946ef':'#2563eb';
+}
+function makeIcon(s){
+  return L.divIcon({className:'shalfa-school-marker',html:`<div style="--marker-color:${markerColor(s)}"><span>${String(s.gender||'').includes('بنات')?'♀':'♂'}</span></div>`,iconSize:[34,44],iconAnchor:[17,42]});
+}
+function contactButtons(name,phone){
+  const p=cleanPhone(phone),wp=whatsappPhone(phone);
+  if(!p)return '<div class="contact-unavailable">لا يوجد رقم جوال مسجل</div>';
+  return `<div class="person-contact-actions">
+    <a class="contact-call" href="tel:${p}">اتصال <span>📞</span></a>
+    <a class="contact-whatsapp" target="_blank" href="https://wa.me/${wp}?text=${encodeURIComponent('السلام عليكم '+(name||''))}">واتساب <span>◉</span></a>
+  </div>`;
+}
+function parseGallery(s){
+  const imgs=[];
+  if(s.main_image_url)imgs.push(s.main_image_url);
+  const raw=String(s.gallery_images||'').trim();
+  if(raw){
+    try{const arr=JSON.parse(raw);if(Array.isArray(arr))imgs.push(...arr);}
+    catch(e){imgs.push(...raw.split(/[\n,;]+/));}
+  }
+  return [...new Set(imgs.map(x=>String(x).trim()).filter(Boolean))].slice(0,5);
+}
+function imageGallery(s){
+  const imgs=parseGallery(s);
+  if(!imgs.length)return `<div class="school-photo-placeholder"><span>🏫</span><b>صور المدرسة</b><small>يمكن إضافتها لاحقًا من ملف المدارس</small></div>`;
+  const main=imgs[0],thumbs=imgs.slice(1);
+  return `<div class="school-photo-area">
+    <div class="school-photo-title">صور المدرسة 📷</div>
+    <img class="school-main-photo" src="${esc(main)}" onerror="this.closest('.school-photo-area').innerHTML='<div class=&quot;school-photo-placeholder&quot;><span>🏫</span><b>تعذر تحميل الصورة</b></div>'">
+    ${thumbs.length?`<div class="school-photo-thumbs">${thumbs.map(x=>`<img src="${esc(x)}" onclick="document.querySelector('.school-main-photo').src=this.src">`).join('')}</div>`:''}
+  </div>`;
+}
+function infoRow(icon,label,value,cls=''){
+  return `<div class="school-data-row ${cls}"><span class="data-icon">${icon}</span><b>${esc(label)}</b><span>${value}</span></div>`;
+}
+function openSchoolCard(s){
+  const guardName=s.guard_name||'غير مرتبط',coordName=s.coordinator_name||'غير محدد';
+  const mapsUrl=`https://www.google.com/maps?q=${s.latitude},${s.longitude}`;
+  document.getElementById('schoolCardContent').innerHTML=`
+  <div class="approved-school-card">
+    <section class="school-card-left">
+      <div class="school-card-title"><span>🏫</span><div><h1>${display(s.school_name)}</h1><p>${display(s.city)} — ${display(s.operational_type||s.school_type)}</p></div></div>
+      <div class="school-summary-grid">
+        <div><small>الرقم الوزاري</small><b>${display(s.ministry_id)}</b></div>
+        <div><small>نوع المدرسة</small><b>${display(s.operational_type||s.school_type)}</b></div>
+        <div><small>النوع</small><b class="blue-value">${display(s.gender)}</b></div>
+        <div><small>الحجم</small><b class="green-value">${display(s.size)}</b></div>
+      </div>
+      <article class="person-profile guard-profile"><span class="profile-icon">👤</span><small>البواب</small><h2>${display(guardName)}</h2><p>الرقم الوظيفي: ${display(s.guard_emp_id)}<br>الجوال: ${display(s.guard_mobile)}</p>${contactButtons(guardName,s.guard_mobile)}</article>
+      <article class="person-profile coordinator-profile"><span class="profile-icon">👥</span><small>المنسق / المشرف</small><h2>${display(coordName)}</h2><p>الرقم الوظيفي: ${display(s.coordinator_emp_id)}<br>الجوال: ${display(s.coordinator_mobile)}</p>${contactButtons(coordName,s.coordinator_mobile)}</article>
+      <a class="school-google-button" target="_blank" href="${mapsUrl}">📍 فتح في Google Maps</a>
+      <button class="copy-location-button" onclick="navigator.clipboard.writeText('${mapsUrl}').then(()=>this.textContent='تم نسخ رابط الموقع ✓')">🔗 نسخ رابط الموقع</button>
+      <div class="school-link-status">
+        <div class="link-status-head"><h3>حالة ربط البواب</h3><span class="${s.guard_emp_id?'linked-pill':'unlinked-pill'}">${s.guard_emp_id?'مرتبط':'غير مرتبط'}</span></div>
+        <p>بيانات الربط الحالية مرتبطة بقاعدة بيانات Shalfa Ops.</p>
+        <div class="school-admin-actions">
+          <a href="/unlinked-guards">👤 إدارة البواب</a>
+          <a href="/unlinked-guards">⇄ نقل البواب</a>
+          <a href="/unlinked-guards">🔗 فك الارتباط</a>
+        </div>
+      </div>
+    </section>
+    <section class="school-card-right">
+      ${imageGallery(s)}
+      <div class="school-data-panel"><h3>بيانات المدرسة</h3>
+        ${infoRow('🪪','الرقم الوزاري',display(s.ministry_id))}
+        ${infoRow('🏫','اسم المدرسة',display(s.school_name))}
+        ${infoRow('📍','المدينة',display(s.city))}
+        ${infoRow('🏢','الحي',display(s.district))}
+        ${infoRow('🎓','المرحلة',display(s.stage))}
+        ${infoRow('👤','النوع',display(s.gender))}
+        ${infoRow('⭐','نوع المدرسة',display(s.operational_type||s.school_type))}
+        ${infoRow('📊','الحجم',display(s.size))}
+        ${infoRow('📖','عدد الفصول',display(s.classrooms_count))}
+        ${infoRow('👥','الطاقة الاستيعابية',s.capacity?display(s.capacity)+' طالب':'—')}
+        ${infoRow('🏛️','الإدارة التعليمية',display(s.education_admin))}
+        ${infoRow('💼','المكتب التعليمي',display(s.education_office))}
+        ${infoRow('📅','تاريخ الإنشاء',display(s.establishment_date))}
+        ${infoRow('✓','حالة المدرسة',display(s.school_status),'status-row')}
+        ${infoRow('🎯','إحداثيات الموقع',display(s.latitude)+', '+display(s.longitude))}
+        ${infoRow('🌐','رابط الموقع',`<a target="_blank" href="${mapsUrl}">عرض الموقع على الخريطة</a>`)}
+        ${infoRow('✅','حالة الحضور',`<b class="school-attendance-status status-${String(s.attendance_status||'لم يسجل').replace(/\s+/g,'-')}">${display(s.attendance_status||'لم يسجل')}</b>`)}
+        ${infoRow('📅','تاريخ الحضور',display(s.attendance_date))}
+        ${infoRow('🕘','وقت التسجيل',display(s.attendance_time))}
+        ${infoRow('📝','ملاحظات',display(s.school_notes))}
+      </div>
+      <div class="school-extra-panel"><h3>معلومات إضافية</h3>
+        <p>🚙 توفر مواقف سيارات: ${yesNo(s.has_parking)}</p>
+        <p>🏟️ توفر ملاعب: ${yesNo(s.has_playground)}</p>
+        <p>🏋️ توفر صالة رياضية: ${yesNo(s.has_sports_hall)}</p>
+      </div>
+      <div class="school-output-actions">
+        <a target="_blank" href="/schools/${encodeURIComponent(s.ministry_id)}/card.pdf">📄 طباعة بطاقة المدرسة PDF</a>
+        <button onclick="shareSchool('${esc(s.school_name)}','${mapsUrl}')">↗ مشاركة</button>
+      </div>
+    </section>
+  </div>`;
+  const modal=document.getElementById('schoolCardModal');
+  modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('modal-open');
+}
+function closeSchoolCard(){const m=document.getElementById('schoolCardModal');m.classList.remove('open');m.setAttribute('aria-hidden','true');document.body.classList.remove('modal-open');}
+function shareSchool(name,url){if(navigator.share)navigator.share({title:name,text:'بطاقة المدرسة',url});else navigator.clipboard.writeText(url).then(()=>alert('تم نسخ رابط الموقع'));}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSchoolCard();});
+
+function buildMarkers(list){
+  cluster.clearLayers();markerByMinistry.clear();const bounds=[];
+  list.forEach(s=>{
+    const marker=L.marker([s.latitude,s.longitude],{icon:makeIcon(s)});
+    marker.bindTooltip(`${esc(s.school_name)} — ${esc(s.ministry_id)}`,{direction:'top'});
+    marker.on('click',()=>openSchoolCard(s));
+    cluster.addLayer(marker);markerByMinistry.set(String(s.ministry_id),marker);bounds.push([s.latitude,s.longitude]);
+  });
+  document.getElementById('visibleCount').textContent=list.length;
+  if(bounds.length)map.fitBounds(bounds,{padding:[25,25],maxZoom:13});
+}
+function renderResults(){
+  const box=document.getElementById('searchResults'),q=document.getElementById('schoolSearch').value.trim();
+  if(!q||!filteredSchools.length){box.innerHTML='';box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=filteredSchools.slice(0,60).map((s,i)=>`<button type="button" data-index="${i}"><b>${esc(s.school_name)}</b><span>${esc(s.city)} — وزاري: ${esc(s.ministry_id)} — البواب: ${esc(s.guard_name||'غير مرتبط')}</span></button>`).join('');
+  box.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{const s=filteredSchools[Number(btn.dataset.index)];map.setView([s.latitude,s.longitude],16);openSchoolCard(s);box.style.display='none';});
+}
+function applyFilters(){
+  const q=document.getElementById('schoolSearch').value.trim().toLowerCase(),city=document.getElementById('cityFilter').value,type=document.getElementById('typeFilter').value,guard=document.getElementById('guardFilter').value;
+  filteredSchools=schoolsData.filter(s=>{const hay=[s.school_name,s.ministry_id,s.guard_name,s.guard_emp_id,s.coordinator_name].join(' ').toLowerCase(),op=s.operational_type||s.school_type||'',has=Boolean(String(s.guard_emp_id||'').trim());return(!q||hay.includes(q))&&(!city||s.city===city)&&(!type||op.includes(type))&&(!guard||(guard==='linked'?has:!has));});
+  buildMarkers(filteredSchools);renderResults();
+}
+fetch('/api/map-schools',{cache:'no-store'}).then(async r=>{const text=await r.text();let payload;try{payload=JSON.parse(text)}catch(e){throw new Error(text.slice(0,160))}if(!r.ok)throw new Error(payload.details||payload.error);return payload;})
+.then(data=>{schoolsData=data;filteredSchools=data;const cities=[...new Set(data.map(x=>x.city).filter(Boolean))].sort(),sel=document.getElementById('cityFilter');cities.forEach(c=>sel.insertAdjacentHTML('beforeend',`<option value="${esc(c)}">${esc(c)}</option>`));buildMarkers(data);})
+.catch(err=>document.getElementById('dynamicLeafletMap').innerHTML=`<div class="map-load-error"><h3>تعذر تحميل بيانات الخريطة</h3><p>${esc(err.message)}</p></div>`);
+['schoolSearch','cityFilter','typeFilter','guardFilter'].forEach(id=>document.getElementById(id).addEventListener(id==='schoolSearch'?'input':'change',applyFilters));
+document.getElementById('clearMapFilters').onclick=()=>{['schoolSearch','cityFilter','typeFilter','guardFilter'].forEach(id=>document.getElementById(id).value='');document.getElementById('searchResults').style.display='none';filteredSchools=schoolsData;buildMarkers(schoolsData);};
+</script>
+</section></div>
+<script src="/static/pwa.js" defer></script>
+</body></html>

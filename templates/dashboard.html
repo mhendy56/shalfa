@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>متابعة الحضور اليومية — Shalfa Ops</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+</head>
+<body><div class="app-layout"><aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside><section class="content attendance-ops-page">
+<header class="approved-topbar">
+  <div class="topbar-title"><h1>متابعة الحضور اليومية</h1>
+  <p>متابعة تسجيل حضور جميع المدارس والمنسقين والتنبيه الفوري للحالات غير المسجلة أو الغائبة.</p></div>
+  <div class="attendance-date-chip"><small>تاريخ المتابعة</small><b>{{work_date}}</b></div>
+</header>
+
+<form class="attendance-filter-bar" method="get">
+  <label>التاريخ<input type="date" name="work_date" value="{{work_date}}"></label>
+  <label>المدينة<select name="city"><option value="">كل المدن</option>{% for x in cities %}<option value="{{x}}" {% if city==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></label>
+  {% if user.role!='coordinator' %}<label>المنسق<select name="coordinator"><option value="">كل المنسقين</option>{% for x in coords %}<option value="{{x}}" {% if coordinator==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></label>{% endif %}
+  <label>نوع المدارس<select name="school_scope">
+    <option value="all" {% if school_scope=='all' %}selected{% endif %}>كل المدارس</option>
+    <option value="main" {% if school_scope=='main' %}selected{% endif %}>الرئيسية فقط</option>
+    <option value="main_branch" {% if school_scope=='main_branch' %}selected{% endif %}>الرئيسية والفرعية</option>
+    <option value="branch" {% if school_scope=='branch' %}selected{% endif %}>الفرعية فقط</option>
+    <option value="annex" {% if school_scope=='annex' %}selected{% endif %}>الملحقة فقط</option>
+  </select></label>
+  <label>حالة الحضور<select name="status_filter">
+    <option value="">كل الحالات</option>
+    {% for st in ['حاضر','غائب','إجازة','بديل','لم يسجل'] %}<option value="{{st}}" {% if status_filter==st %}selected{% endif %}>{{st}}</option>{% endfor %}
+  </select></label>
+  <button>تحديث المتابعة</button>
+  <a href="/export.xlsx?work_date={{work_date}}&city={{city}}&coordinator={{coordinator}}&school_scope={{school_scope}}">تصدير Excel</a>
+</form>
+
+<section class="attendance-kpi-grid">
+  <a href="?work_date={{work_date}}&city={{city}}&coordinator={{coordinator}}&school_scope={{school_scope}}&status_filter=حاضر" class="present"><span>✓</span><small>حاضر</small><b>{{counts['حاضر']}}</b></a>
+  <a href="?work_date={{work_date}}&city={{city}}&coordinator={{coordinator}}&school_scope={{school_scope}}&status_filter=غائب" class="absent"><span>!</span><small>غائب</small><b>{{counts['غائب']}}</b></a>
+  <a href="?work_date={{work_date}}&city={{city}}&coordinator={{coordinator}}&school_scope={{school_scope}}&status_filter=إجازة" class="leave"><span>◷</span><small>إجازة</small><b>{{counts['إجازة']}}</b></a>
+  <a href="?work_date={{work_date}}&city={{city}}&coordinator={{coordinator}}&school_scope={{school_scope}}&status_filter=بديل" class="replacement"><span>⇄</span><small>بديل</small><b>{{counts['بديل']}}</b></a>
+  <a href="?work_date={{work_date}}&city={{city}}&coordinator={{coordinator}}&school_scope={{school_scope}}&status_filter=لم يسجل" class="unrecorded"><span>?</span><small>لم يسجل</small><b>{{counts['لم يسجل']}}</b></a>
+  <article class="coverage"><span>◎</span><small>نسبة التغطية</small><b>{{'%.1f'|format(coverage)}}%</b></article>
+  <article class="recording"><span>▣</span><small>نسبة التسجيل</small><b>{{'%.1f'|format(recording_pct)}}%</b></article>
+  <article class="alerts"><span>⚠</span><small>تحتاج متابعة</small><b>{{alerts_count}}</b></article>
+</section>
+
+<div class="attendance-import-row">
+<form action="/attendance/import" method="post" enctype="multipart/form-data">
+  <input type="hidden" name="work_date" value="{{work_date}}">
+  <input type="file" name="file" accept=".xlsx" required>
+  <button>📥 استيراد ملف حضور Excel</button>
+</form>
+<p>يدعم الملف الحالي: التاريخ، الرقم الوزاري، الحالة، البديل، الملاحظات، وقت التسجيل.</p>
+</div>
+
+<section class="attendance-summary-panel">
+<header><h2>ملخص أداء المنسقين والمشرفين</h2><span>{{summary|length}} نطاقًا تشغيليًا</span></header>
+<div class="attendance-summary-grid">
+{% for s in summary %}
+<article class="{% if s.unrecorded or s.absent %}needs-attention{% else %}completed{% endif %}">
+  <div class="summary-head"><div><h3>{{s.coordinator_name}}</h3><p>{{s.city}}</p></div><b>{{s.recording_pct}}%</b></div>
+  <div class="summary-progress"><i style="width:{{s.recording_pct}}%"></i></div>
+  <div class="summary-numbers">
+    <span>الإجمالي <b>{{s.total}}</b></span>
+    <span>حاضر <b>{{s.present or 0}}</b></span>
+    <span>غائب <b>{{s.absent or 0}}</b></span>
+    <span>لم يسجل <b>{{s.unrecorded or 0}}</b></span>
+  </div>
+  <small>آخر تسجيل: {{s.last_recorded_at or '—'}}</small>
+</article>
+{% endfor %}
+</div>
+</section>
+
+<section class="attendance-details-panel">
+<header><h2>تفاصيل المدارس</h2><span>النتائج المعروضة: {{rows|length}}</span></header>
+<div class="attendance-table-wrap"><table>
+<thead><tr><th>المدرسة</th><th>المدينة</th><th>المنسق</th><th>البواب</th><th>الرقم الوظيفي</th><th>الجوال</th><th>الحالة</th><th>وقت التسجيل</th><th>إجراء سريع</th></tr></thead>
+<tbody>
+{% for r in rows %}
+<tr class="attendance-row status-{{(r.status or 'لم يسجل')|replace(' ','-')}}">
+<td><b>{{r.school_name}}</b><small>وزاري: {{r.ministry_id}}</small></td>
+<td>{{r.city}}</td><td>{{r.coordinator_name or 'غير متوفر'}}</td>
+<td>{{r.guard_name or 'غير مرتبط'}}</td><td>{{r.guard_emp_id or '—'}}</td>
+<td>{% if r.guard_mobile %}<a href="tel:{{r.guard_mobile}}">{{r.guard_mobile}}</a>{% else %}—{% endif %}</td>
+<td><span class="attendance-status-badge">{{r.status or 'لم يسجل'}}</span></td>
+<td>{{r.recorded_at or '—'}}</td>
+<td><div class="attendance-actions" data-mid="{{r.ministry_id}}">
+{% for st in ['حاضر','غائب','إجازة','بديل'] %}<button type="button" data-status="{{st}}">{{st}}</button>{% endfor %}
+</div></td>
+</tr>
+{% else %}<tr><td colspan="9">لا توجد نتائج مطابقة.</td></tr>{% endfor %}
+</tbody></table></div>
+</section>
+
+<script>
+document.querySelectorAll('.attendance-actions button').forEach(btn=>btn.addEventListener('click',async()=>{
+  const box=btn.closest('.attendance-actions');
+  const fd=new FormData();
+  fd.append('work_date','{{work_date}}');
+  fd.append('ministry_id',box.dataset.mid);
+  fd.append('status',btn.dataset.status);
+  fd.append('notes','');
+  const response=await fetch('/attendance/save',{method:'POST',body:fd});
+  if(response.ok) location.reload();
+}));
+</script>
+</section></div><script src="/static/pwa.js" defer></script></body></html>

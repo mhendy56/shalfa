@@ -1,0 +1,13 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<title>تقرير المدارس</title><style>
+@page{size:A4 landscape;margin:8mm}body{font-family:Arial,sans-serif;color:#102a4c}h1{text-align:center}
+.meta{text-align:center;margin-bottom:12px}.table{border-collapse:collapse;width:100%;font-size:8px}.table th,.table td{border:1px solid #adb8c6;padding:4px;text-align:right}.table th{background:#082b60;color:#fff}
+.no-print{margin:10px;text-align:center}.no-print button{padding:10px 20px;background:#1267df;color:#fff;border:0;border-radius:6px}
+@media print{.no-print{display:none}}
+</style></head><body>
+<div class="no-print"><button onclick="window.print()">طباعة / حفظ PDF</button></div>
+<h1>تقرير المدارس والبوابين والمنسقين</h1>
+<div class="meta">شركة شلفا لإدارة المرافق — عدد السجلات: {{rows|length}}</div>
+<table class="table"><thead><tr>{% for c in columns[:19] %}<th>{{labels.get(c,c)}}</th>{% endfor %}</tr></thead><tbody>
+{% for r in rows %}<tr>{% for c in columns[:19] %}<td>{{r[c] if r[c] is not none else ''}}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table><script>setTimeout(()=>window.print(),500)</script></body></html>

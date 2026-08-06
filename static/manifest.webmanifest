@@ -1,0 +1,69 @@
+{
+  "name": "Shalfa Ops | TBC",
+  "short_name": "Shalfa Ops",
+  "description": "نظام إدارة العمليات الأمنية وخدمات البوابين والتشغيل والصيانة",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/coordinator-mobile?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#eef3f8",
+  "theme_color": "#082b60",
+  "categories": [
+    "business",
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "تطبيق المنسق",
+      "url": "/coordinator-mobile"
+    },
+    {
+      "name": "المهام",
+      "url": "/tasks"
+    },
+    {
+      "name": "الجولات",
+      "url": "/guard-tours"
+    },
+    {
+      "name": "الصيانة والنظافة",
+      "url": "/fm-dashboard"
+    },
+    {
+      "name": "أوامر الصيانة",
+      "url": "/maintenance-work-orders"
+    },
+    {
+      "name": "تطبيق الفني",
+      "url": "/technician-mobile"
+    }
+  ]
+}

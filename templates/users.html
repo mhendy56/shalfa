@@ -1,0 +1,141 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>إدارة المستخدمين</title><link rel="stylesheet" href="/static/style.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shalfa Ops">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+</head><body><div class="app-layout">
+<aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside>
+
+
+<div class="nav">
+  <a href="/home">🏠 الرئيسية</a>
+  <a href="/map">🗺️ الخريطة التفاعلية</a>
+  <a href="/attendance">✅ الحضور اليومي</a>
+  <a href="/period-report">📅 تقارير من تاريخ إلى تاريخ</a>
+  <a href="/supervisor-dashboard">📊 داشبورد المناطق والمشرفين</a>
+  <a href="/schools">🏫 المدارس والبوابون</a>
+  <a href="/coordinators">👥 المنسقون</a>
+  <a href="/violations">⚠️ مخالفات حراس الأمن</a>
+  <a href="/reports">📄 التقارير</a>
+  <a href="/logout">🚪 خروج</a>
+ </div>
+</div>
+<section class="content">
+<div class="hero compact"><div><h1>إدارة المستخدمين والصلاحيات</h1><p>إضافة وتعديل وتعطيل وحذف المستخدمين والتحكم في الصفحات المسموح بها.</p></div></div>
+
+<div class="two-cols">
+<form class="panel form-grid" method="post" action="/users/create"><h3>إضافة مستخدم جديد</h3>
+<label>اسم المستخدم<input name="username" required></label>
+<label>كلمة المرور<input name="password" type="password" required></label>
+<label>الاسم الكامل<input name="full_name" required></label>
+<label>الدور<select name="role"><option value="admin">مدير نظام</option><option value="manager">مدير</option><option value="supervisor">مشرف عام</option><option value="coordinator">منسق / مشرف</option><option value="client">عميل - عرض فقط</option><option value="external_requester">مستخدم طلبات خارجية</option></select></label>
+<label class="full">ربط بمنسق<select name="coordinator_name"><option value="">بدون ربط</option>{% for c in coordinators %}<option value="{{c}}">{{c}}</option>{% endfor %}</select></label>
+<div class="full external-user-fields">
+<label>القسم الخارجي<select name="external_department"><option value="">غير محدد</option><option>التشغيل</option><option>الصيانة</option><option>النظافة</option><option>مقاول خارجي</option></select></label>
+<label>الشركة / الجهة<input name="external_company"></label>
+<label>رقم الجوال<input name="external_mobile"></label>
+</div>
+<div class="full client-user-fields">
+  <h4>نطاق لوحة العميل</h4>
+  <label>اسم العميل / الجهة<input name="client_name" placeholder="مثال: TBC أو تعليم القصيم"></label>
+  <label>تقييد بمدينة<select name="client_city"><option value="">كل المدن</option>{% for c in cities %}<option value="{{c}}">{{c}}</option>{% endfor %}</select></label>
+  <label>تقييد بمنسق<select name="client_coordinator"><option value="">كل المنسقين</option>{% for c in coordinators %}<option value="{{c}}">{{c}}</option>{% endfor %}</select></label>
+</div>
+<button class="full">إضافة المستخدم</button>
+</form>
+<div class="panel"><h3>ملاحظات الصلاحيات</h3><p>يمكنك تحديد كل صفحة يشاهدها المستخدم. تعطيل الصفحة يمنع ظهورها ويمنع فتح رابطها مباشرة.</p><p><b>الحذف:</b> يحذف الحساب نهائيًا.<br><b>التعطيل:</b> يحتفظ بالحساب ويمنع تسجيل الدخول.</p></div>
+</div>
+
+<div class="user-grid">
+{% for u in users %}
+<article class="user-card {% if not u.is_active %}user-disabled{% endif %}">
+ <div class="user-head"><div><h3>{{u.full_name}}</h3><span>@{{u.username}} — {{u.role}}</span></div><span class="status-pill">{{'نشط' if u.is_active else 'معطل'}}</span></div>
+ <form method="post" action="/users/{{u.id}}/update" class="form-grid compact-form">
+  <label>الاسم<input name="full_name" value="{{u.full_name}}"></label>
+  <label>الدور<select name="role">
+   {% for role,label in [('admin','مدير نظام'),('manager','مدير'),('supervisor','مشرف عام'),('coordinator','منسق / مشرف'),('client','عميل'),('external_requester','مستخدم طلبات خارجية')] %}
+   <option value="{{role}}" {% if u.role==role %}selected{% endif %}>{{label}}</option>
+   {% endfor %}
+  </select></label>
+  <label class="full">المنسق<select name="coordinator_name"><option value="">بدون ربط</option>{% for c in coordinators %}<option value="{{c}}" {% if u.coordinator_name==c %}selected{% endif %}>{{c}}</option>{% endfor %}</select></label>
+  <label>القسم الخارجي<input name="external_department" value="{{u.external_department or ''}}"></label>
+  <label>الشركة / الجهة<input name="external_company" value="{{u.external_company or ''}}"></label>
+  <label class="full">جوال المستخدم الخارجي<input name="external_mobile" value="{{u.external_mobile or ''}}"></label>
+  <div class="full client-user-fields">
+   <h4>نطاق لوحة العميل</h4>
+   <label>اسم العميل / الجهة<input name="client_name" value="{{u.client_name or ''}}"></label>
+   <label>المدينة<select name="client_city"><option value="">كل المدن</option>{% for c in cities %}<option value="{{c}}" {% if u.client_city==c %}selected{% endif %}>{{c}}</option>{% endfor %}</select></label>
+   <label>المنسق<select name="client_coordinator"><option value="">كل المنسقين</option>{% for c in coordinators %}<option value="{{c}}" {% if u.client_coordinator==c %}selected{% endif %}>{{c}}</option>{% endfor %}</select></label>
+  </div>
+  <input type="hidden" name="is_active" value="{{1 if u.is_active else 0}}">
+  <button class="full">حفظ البيانات</button>
+ </form>
+
+ <form method="post" action="/users/{{u.id}}/password" class="inline-form">
+  <input name="new_password" type="password" placeholder="كلمة مرور جديدة" required><button>تغيير كلمة المرور</button>
+ </form>
+
+ <details><summary>الصلاحيات والصفحات</summary>
+  <form method="post" action="/users/{{u.id}}/permissions" class="permission-grid">
+   {% set up=permissions.get(u.id,{}) %}
+   {% for key,label in permission_catalog.items() %}
+   <label><input type="checkbox" name="perm_{{key}}" {% if up.get(key,False) %}checked{% endif %}> {{label}}</label>
+   {% endfor %}
+   <button class="full">حفظ الصلاحيات</button>
+  </form>
+ </details>
+
+ <div class="user-actions">
+  <form method="post" action="/users/{{u.id}}/toggle"><button>{{'تعطيل' if u.is_active else 'تفعيل'}}</button></form>
+  <form method="post" action="/users/{{u.id}}/delete" onsubmit="return confirm('حذف المستخدم نهائيًا؟')"><button class="danger-btn">حذف</button></form>
+ </div>
+</article>
+{% endfor %}
+</div>
+</section></div><script src="/static/pwa.js" defer></script>
+</body></html>

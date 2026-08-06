@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إدارة المنسقين / المشرفين — Shalfa Ops</title>
+<link rel="stylesheet" href="/static/style.css">
+
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shalfa Ops">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+</head>
+<body><div class="app-layout"><aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/relationship-center"><span>🔄</span><b>مركز الربط والمزامنة</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a href="/audit-trail"><span>🧾</span><b>سجل التدقيق</b></a>
+<a href="/tasks"><span>✅</span><b>المهام</b></a>
+<a href="/coordinator-mobile"><span>📱</span><b>تطبيق المنسق</b></a>
+<a href="/ask-shalfa"><span>✨</span><b>اسأل شلفا</b></a>
+<a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside>
+<section class="content">
+<header class="approved-topbar">
+ <div class="topbar-title"><h1>إدارة المنسقين / المشرفين</h1>
+ <p>المشرف هو المنسق: إضافة وتعديل وإسناد ونقل وإعادة توزيع المدارس.</p></div>
+ <div class="topbar-user"><div><b>{{user.full_name}}</b><small>Shalfa Ops V13</small></div><div class="topbar-avatar">👥</div></div>
+</header>
+
+{% if request.query_params.get('import_added') is not none %}
+<div class="panel import-result-panel">
+ <h3>✅ نتيجة استيراد المنسقين / المشرفين</h3>
+ <div class="coord-summary compact-summary">
+  <article><small>تمت الإضافة</small><b>{{request.query_params.get('import_added','0')}}</b></article>
+  <article><small>تم التحديث</small><b>{{request.query_params.get('import_updated','0')}}</b></article>
+  <article><small>بدون تغيير</small><b>{{request.query_params.get('import_unchanged','0')}}</b></article>
+  <article><small>مدارس أُعيد ربطها</small><b>{{request.query_params.get('import_assigned','0')}}</b></article>
+  <article><small>تم إيقافهم</small><b>{{request.query_params.get('import_deactivated','0')}}</b></article>
+  <article><small>صفوف مكررة</small><b>{{request.query_params.get('import_duplicates','0')}}</b></article>
+  <article><small>مدارس غير موجودة</small><b>{{request.query_params.get('import_missing_schools','0')}}</b></article>
+ </div>
+</div>
+{% endif %}
+
+<div class="coord-summary">
+ <article><span>👥</span><small>إجمالي المنسقين</small><b>{{rows|length}}</b></article>
+ <article><span>✅</span><small>المنسقون النشطون</small><b>{{rows|selectattr('is_active','equalto',1)|list|length}}</b></article>
+ <article><span>🏫</span><small>مدارس بدون منسق</small><b>{{unassigned}}</b></article>
+ <article><span>📤</span><small>تقرير التوزيع</small><a href="/coordinators/distribution.xlsx">تحميل Excel</a></article>
+</div>
+
+<section class="executive-panel coordinator-import-panel">
+<div class="section-title"><h2>استيراد وتحديث المنسقين / المشرفين من Excel</h2><span>📥</span></div>
+<div class="two-cols">
+<form class="panel form-grid" method="post" action="/coordinators/import" enctype="multipart/form-data"
+ onsubmit="return confirm('سيتم تحديث وإضافة المنسقين حسب الرقم الوظيفي، وربط المدارس عند وجود الرقم الوزاري. متابعة؟')">
+ <h3>مزامنة ملف المنسقين</h3>
+ <label class="full">ملف Excel<input type="file" name="file" accept=".xlsx" required></label>
+ <label class="full option-line"><input type="checkbox" name="update_school_assignments" value="yes" checked> تحديث ربط المدارس حسب الرقم الوزاري الموجود بالملف</label>
+ <label class="full option-line warning-option"><input type="checkbox" name="deactivate_missing" value="yes"> إيقاف المنسقين غير الموجودين في الملف</label>
+ <small class="full muted">المطابقة الأساسية بالرقم الوظيفي. عند عدم وجوده تتم المطابقة بالاسم الكامل. يمكن تكرار المنسق في أكثر من صف لإسناد عدة مدارس.</small>
+ <button class="full">📥 استيراد وتحديث المنسقين</button>
+</form>
+<article class="panel import-guide-card">
+ <h3>ملفات الاستيراد والتصدير</h3>
+ <p>حمّل القالب، أدخل بيانات المنسقين والمدارس التابعة لهم، ثم ارفعه من النموذج.</p>
+ <div class="import-link-grid">
+  <a class="primary-action" href="/coordinators/import-template.xlsx">⬇️ تحميل قالب الاستيراد</a>
+  <a class="secondary-action" href="/coordinators/master.xlsx">📤 تصدير المنسقين الحاليين</a>
+  <a class="secondary-action" href="/coordinators/distribution.xlsx">🏫 تصدير توزيع المدارس</a>
+ </div>
+ <ul>
+  <li>الرقم الوظيفي، الاسم، الجوال، البريد، المدينة، القطاع، الحالة.</li>
+  <li>الرقم الوزاري اختياري، ويستخدم لتحديث ربط المدرسة.</li>
+  <li>الحالة: نشط أو موقوف.</li>
+ </ul>
+</article>
+</div>
+</section>
+
+<div class="two-cols coord-top">
+<form class="panel form-grid" method="post" action="/coordinators/create">
+ <h3>إضافة منسق / مشرف جديد</h3>
+ <label>الاسم الكامل<input name="full_name" required></label>
+ <label>الرقم الوظيفي<input name="emp_id"></label>
+ <label>رقم الجوال<input name="mobile"></label>
+ <label>البريد الإلكتروني<input name="email" type="email"></label>
+ <label>المدينة<input name="city"></label>
+ <label>القطاع<input name="sector"></label>
+ <label class="full">ملاحظات<textarea name="notes"></textarea></label>
+ <button class="full">➕ إضافة المنسق</button>
+</form>
+
+<form class="panel form-grid" method="post" action="/coordinators/redistribute" onsubmit="return confirm('سيتم إعادة توزيع المدارس المحددة بالتساوي على المنسقين المختارين. متابعة؟')">
+ <h3>إعادة توزيع تلقائي</h3>
+ <label>المدينة<select name="redistribute_city"><option value="">كل المدن</option>
+ {% for x in cities %}<option value="{{x}}">{{x}}</option>{% endfor %}</select></label>
+ <label>نوع المدارس<select name="redistribute_scope"><option value="all">كل المدارس</option><option value="main">الرئيسية فقط</option><option value="branch">الفرعية فقط</option></select></label>
+ <div class="full coordinator-checks">
+ {% for c in rows if c.is_active %}
+ <label><input type="checkbox" name="redistribute_coordinators" value="{{c.id}}"> {{c.full_name}}</label>
+ {% endfor %}
+ </div>
+ <small class="full muted">عدم اختيار أسماء يعني استخدام كل المنسقين النشطين.</small>
+ <button class="full warning-action">⚖️ إعادة التقسيم بالتساوي</button>
+</form>
+</div>
+
+<section class="executive-panel">
+<div class="section-title"><h2>المنسقون / المشرفون</h2><span>👥</span></div>
+<div class="coordinator-admin-grid">
+{% for c in rows %}
+<article class="coordinator-admin-card {% if not c.is_active %}inactive-card{% endif %}">
+ <div class="coord-card-head"><div class="coord-avatar">👤</div><div><h3>{{c.full_name}}</h3><small>{{'نشط' if c.is_active else 'موقوف'}}</small></div><b>{{c.total or 0}} مدرسة</b></div>
+ <div class="coord-stats"><span>رئيسية <b>{{c.main_count or 0}}</b></span><span>فرعية <b>{{c.branch_count or 0}}</b></span><span>المدينة <b>{{c.city or '—'}}</b></span><span>القطاع <b>{{c.sector or '—'}}</b></span></div>
+ <details><summary>تعديل البيانات</summary>
+  <form class="form-grid compact-form" method="post" action="/coordinators/{{c.id}}/update">
+   <label>الاسم<input name="full_name" value="{{c.full_name}}" required></label>
+   <label>الوظيفي<input name="emp_id" value="{{c.emp_id or ''}}"></label>
+   <label>الجوال<input name="mobile" value="{{c.mobile or ''}}"></label>
+   <label>البريد<input name="email" type="email" value="{{c.email or ''}}"></label>
+   <label>المدينة<input name="city" value="{{c.city or ''}}"></label>
+   <label>القطاع<input name="sector" value="{{c.sector or ''}}"></label>
+   <label class="full">ملاحظات<textarea name="notes">{{c.notes or ''}}</textarea></label>
+   <button class="full">حفظ التعديل</button>
+  </form>
+ </details>
+ <div class="coord-actions">
+  <form method="post" action="/coordinators/{{c.id}}/toggle"><button>{{'إيقاف' if c.is_active else 'تفعيل'}}</button></form>
+  <form method="post" action="/coordinators/{{c.id}}/delete" onsubmit="return confirm('حذف المنسق؟ يجب ألا تكون لديه مدارس.')"><button class="danger-btn">حذف</button></form>
+ </div>
+</article>
+{% endfor %}
+</div>
+</section>
+
+<section class="executive-panel school-distribution-panel">
+<div class="section-title"><h2>توزيع المدارس على المنسقين</h2><span>🏫</span></div>
+<form class="filters distribution-filters" method="get">
+ <input name="q" value="{{q}}" placeholder="اسم المدرسة أو الرقم الوزاري">
+ <select name="city"><option value="">كل المدن</option>{% for x in cities %}<option value="{{x}}" {% if city==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select>
+ <select name="current_coordinator"><option value="">كل المنسقين</option><option value="unassigned" {% if current_coordinator=='unassigned' %}selected{% endif %}>بدون منسق</option>
+ {% for c in rows %}<option value="{{c.full_name}}" {% if current_coordinator==c.full_name %}selected{% endif %}>{{c.full_name}}</option>{% endfor %}</select>
+ <select name="school_type"><option value="all">كل الأنواع</option><option value="main" {% if school_type=='main' %}selected{% endif %}>الرئيسية</option><option value="branch" {% if school_type=='branch' %}selected{% endif %}>الفرعية</option><option value="annex" {% if school_type=='annex' %}selected{% endif %}>الملحقة</option></select>
+ <button>تصفية</button>
+</form>
+
+<form method="post" action="/coordinators/assign" id="distributionForm">
+<div class="bulk-assignment-bar">
+ <label>المنسق الجديد<select name="coordinator_id" required><option value="">اختر المنسق</option>
+ {% for c in rows if c.is_active %}<option value="{{c.id}}">{{c.full_name}} — {{c.city or 'كل المدن'}}</option>{% endfor %}</select></label>
+ <button>إسناد المدارس المحددة</button>
+ <button type="submit" formaction="/coordinators/unassign" class="secondary-action">فك الإسناد</button>
+ <button type="button" onclick="document.querySelectorAll('.school-check').forEach(x=>x.checked=true)">تحديد الكل</button>
+ <button type="button" onclick="document.querySelectorAll('.school-check').forEach(x=>x.checked=false)">إلغاء التحديد</button>
+</div>
+<div class="distribution-table-wrap"><table class="distribution-table"><thead><tr><th>اختيار</th><th>الرقم الوزاري</th><th>المدرسة</th><th>المدينة</th><th>النوع</th><th>المنسق الحالي</th><th>البواب</th></tr></thead><tbody>
+{% for s in schools %}
+<tr>
+ <td><input class="school-check" type="checkbox" name="ministry_ids" value="{{s.ministry_id}}"></td>
+ <td>{{s.ministry_id}}</td><td>{{s.school_name}}</td><td>{{s.city}}</td><td>{{s.school_type}}</td>
+ <td>{{s.coordinator_name or 'بدون منسق'}}</td><td>{{s.guard_name or 'بدون بواب'}}</td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+</form>
+</section>
+</section></div><script src="/static/pwa.js" defer></script>
+</body></html>

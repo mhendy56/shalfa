@@ -1,0 +1,89 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>تحديث بيانات المدارس</title><link rel="stylesheet" href="/static/style.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shalfa Ops">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+</head><body><div class="app-layout">
+<aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside>
+
+
+<div class="nav">
+  <a href="/home">🏠 الرئيسية</a>
+  <a href="/map">🗺️ الخريطة التفاعلية</a>
+  <a href="/attendance">✅ الحضور اليومي</a>
+  <a href="/period-report">📅 تقارير من تاريخ إلى تاريخ</a>
+  <a href="/supervisor-dashboard">📊 داشبورد المناطق والمشرفين</a>
+  <a href="/schools">🏫 المدارس والبوابون</a>
+  <a href="/coordinators">👥 المنسقون</a>
+  <a href="/violations">⚠️ مخالفات حراس الأمن</a>
+  <a href="/reports">📄 التقارير</a>
+  <a href="/logout">🚪 خروج</a>
+ </div>
+</div>
+<section class="content">
+<div class="hero compact"><div><h1>استيراد Master Data الشامل</h1><p>استبدال بيانات المدارس والبوابين والمنسقين / المشرفين والإداريين من ملف Master Data واحد، مع إبقاء السجلات التشغيلية.</p></div></div>
+<div class="two-cols">
+<form class="panel form-grid" method="post" enctype="multipart/form-data" action="/school-import">
+<h3>استيراد المدارس والموظفين</h3>
+<label class="full">ملف Excel<input type="file" name="file" accept=".xlsx,.xls" required></label>
+<div class="full import-note"><b>تنبيه:</b> العملية تستبدل البيانات الأساسية القديمة. المدارس غير الموجودة في الملف سيتم تحويلها إلى «مغلقة»، بينما الحضور والمخالفات والتصاريح والجولات لا تُحذف.</div>
+<label class="full"><input type="checkbox" name="replace_master" value="yes" required> أوافق على استبدال Master Data الحالية</label>
+<label class="full">اكتب للتأكيد: <b>استبدال البيانات</b><input name="confirmation" required placeholder="استبدال البيانات"></label>
+<button class="full">مسح البيانات الأساسية القديمة واستيراد Master Data</button>
+<a class="full export" href="/school-import/template.xlsx">تحميل قالب Excel</a>
+</form>
+<div class="panel"><h3>نتيجة آخر عمليات الاستيراد</h3>
+<div class="mini-cards">
+{% for b in batches %}<article><b>{{b.file_name}}</b><small>{{b.imported_at}} — {{b.imported_by_name or ''}}</small><div>إضافة: {{b.added_count}} | تحديث: {{b.updated_count}} | بدون تغيير: {{b.unchanged_count}} | غير موجودة: {{b.missing_count}}</div></article>{% endfor %}
+</div></div>
+</div>
+<div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>الرقم الوزاري</th><th>المدرسة</th><th>نوع التغيير</th><th>الحقل</th><th>القيمة القديمة</th><th>القيمة الجديدة</th><th>المستخدم</th></tr></thead><tbody>
+{% for c in changes %}<tr><td>{{c.changed_at}}</td><td>{{c.ministry_id}}</td><td>{{c.school_name}}</td><td>{{c.change_type}}</td><td>{{c.field_name}}</td><td>{{c.old_value}}</td><td>{{c.new_value}}</td><td>{{c.changed_by_name or ''}}</td></tr>{% endfor %}
+</tbody></table></div>
+</section></div><script src="/static/pwa.js" defer></script>
+</body></html>

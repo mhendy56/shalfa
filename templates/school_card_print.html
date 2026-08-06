@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>بطاقة المدرسة - {{school.school_name}}</title>
+<style>
+@page{size:A4 landscape;margin:10mm}
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;color:#102b52;background:#eef3f8}
+.print-toolbar{position:sticky;top:0;z-index:5;background:#082b60;color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center}
+.print-toolbar button{background:#fff;color:#082b60;border:0;border-radius:8px;padding:9px 18px;font-weight:800;cursor:pointer}
+.card{background:#fff;margin:14px auto;max-width:1400px;border-radius:16px;padding:18px;display:grid;grid-template-columns:.82fr 1.25fr;gap:18px}
+.title{display:flex;justify-content:center;align-items:center;gap:10px;border-bottom:1px solid #e5ebf2;padding-bottom:12px}.title h1{margin:0;font-size:28px}.title p{margin:5px 0 0;color:#64748b}.icon{font-size:42px}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}.summary div{background:#f6f8fb;border-radius:11px;padding:10px;text-align:center}.summary small,.summary b{display:block}.summary b{font-size:20px;margin-top:4px}
+.person{border-radius:13px;padding:14px;margin:10px 0;text-align:center}.guard{background:#eef5ff}.coord{background:#eef9f2}.person h2{margin:5px 0}.person p{margin:0;color:#53657c;line-height:1.7}
+.image-box{height:230px;border:1px solid #dfe7f1;border-radius:13px;overflow:hidden;background:#f3f6fa;display:grid;place-items:center}.image-box img{width:100%;height:100%;object-fit:cover}.placeholder{font-size:54px;text-align:center}.placeholder small{display:block;font-size:13px;color:#64748b}
+.panel{border:1px solid #dfe7f1;border-radius:13px;padding:12px;margin-top:11px}.panel h3{margin:0 0 7px}.row{display:grid;grid-template-columns:30px 170px 1fr;gap:6px;padding:6px 0;border-bottom:1px solid #edf1f6}.row:last-child{border-bottom:0}.row b{color:#53657c}.yes{color:#159447}.no{color:#d92d20}
+.footer{grid-column:1/-1;border-top:1px solid #e5ebf2;padding-top:9px;text-align:center;color:#64748b;font-size:12px}
+@media print{body{background:#fff}.print-toolbar{display:none}.card{margin:0;max-width:none;padding:0;box-shadow:none}.image-box{height:205px}}
+</style>
+
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shalfa Ops">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+</head>
+<body>
+<div class="print-toolbar">
+  <b>بطاقة المدرسة - {{school.school_name}}</b>
+  <button onclick="window.print()">طباعة / حفظ PDF</button>
+</div>
+<div class="card">
+<section>
+  <div class="title"><span class="icon">🏫</span><div><h1>{{school.school_name}}</h1><p>{{school.city or '—'}} - {{school.operational_type or school.school_type or '—'}}</p></div></div>
+  <div class="summary">
+    <div><small>الرقم الوزاري</small><b>{{school.ministry_id}}</b></div>
+    <div><small>نوع المدرسة</small><b>{{school.operational_type or school.school_type or '—'}}</b></div>
+    <div><small>النوع</small><b>{{school.gender or '—'}}</b></div>
+    <div><small>الحجم</small><b>{{school.size or '—'}}</b></div>
+  </div>
+  <div class="person guard">
+    <small>البواب</small><h2>{{school.guard_name or 'غير مرتبط'}}</h2>
+    <p>الرقم الوظيفي: {{school.guard_emp_id or '—'}}<br>الجوال: {{school.guard_mobile or '—'}}</p>
+  </div>
+  <div class="person coord">
+    <small>المنسق / المشرف</small><h2>{{school.coordinator_name or 'غير محدد'}}</h2>
+    <p>الرقم الوظيفي: {{school.coordinator_emp_id or '—'}}<br>الجوال: {{school.coordinator_mobile or '—'}}</p>
+  </div>
+  <div class="panel">
+    <h3>حالة ربط البواب</h3>
+    <p>{{'مرتبط' if school.guard_emp_id else 'غير مرتبط'}}</p>
+    <p>آخر إجراء: {{guard_log.action_type if guard_log else '—'}}</p>
+    <p>تم بواسطة: {{guard_log.changed_by_name if guard_log and guard_log.changed_by_name else '—'}}</p>
+  </div>
+</section>
+<section>
+  <div class="image-box">
+  {% if school.main_image_url %}
+    <img src="{{school.main_image_url}}" alt="صورة المدرسة">
+  {% else %}
+    <div class="placeholder">🏫<small>لا توجد صورة مسجلة للمدرسة</small></div>
+  {% endif %}
+  </div>
+  <div class="panel"><h3>بيانات المدرسة</h3>
+    <div class="row"><span>🪪</span><b>الرقم الوزاري</b><span>{{school.ministry_id}}</span></div>
+    <div class="row"><span>🏫</span><b>اسم المدرسة</b><span>{{school.school_name}}</span></div>
+    <div class="row"><span>📍</span><b>المدينة</b><span>{{school.city or '—'}}</span></div>
+    <div class="row"><span>🏢</span><b>الحي</b><span>{{school.district or '—'}}</span></div>
+    <div class="row"><span>🎓</span><b>المرحلة</b><span>{{school.stage or '—'}}</span></div>
+    <div class="row"><span>👤</span><b>النوع</b><span>{{school.gender or '—'}}</span></div>
+    <div class="row"><span>⭐</span><b>نوع المدرسة</b><span>{{school.operational_type or school.school_type or '—'}}</span></div>
+    <div class="row"><span>📊</span><b>الحجم</b><span>{{school.size or '—'}}</span></div>
+    <div class="row"><span>📖</span><b>عدد الفصول</b><span>{{school.classrooms_count or '—'}}</span></div>
+    <div class="row"><span>👥</span><b>الطاقة الاستيعابية</b><span>{{school.capacity or '—'}}</span></div>
+    <div class="row"><span>🏛️</span><b>الإدارة التعليمية</b><span>{{school.education_admin or '—'}}</span></div>
+    <div class="row"><span>💼</span><b>المكتب التعليمي</b><span>{{school.education_office or '—'}}</span></div>
+    <div class="row"><span>📅</span><b>تاريخ الإنشاء</b><span>{{school.establishment_date or '—'}}</span></div>
+    <div class="row"><span>✓</span><b>حالة المدرسة</b><span class="yes">{{school.school_status or 'نشطة'}}</span></div>
+    <div class="row"><span>🎯</span><b>إحداثيات الموقع</b><span>{{school.latitude or '—'}}, {{school.longitude or '—'}}</span></div>
+    <div class="row"><span>📝</span><b>ملاحظات</b><span>{{school.school_notes or '—'}}</span></div>
+  </div>
+  <div class="panel"><h3>معلومات إضافية</h3>
+    <p>🚙 توفر مواقف سيارات: <b>{{school.has_parking or '—'}}</b></p>
+    <p>🏟️ توفر ملاعب: <b>{{school.has_playground or '—'}}</b></p>
+    <p>🏋️ توفر صالة رياضية: <b>{{school.has_sports_hall or '—'}}</b></p>
+  </div>
+</section>
+<div class="footer">Shalfa Ops - شركة شلفا لإدارة المرافق</div>
+</div>
+<script>
+window.addEventListener('load',()=>setTimeout(()=>window.print(),500));
+</script>
+<script src="/static/pwa.js" defer></script>
+</body>
+</html>

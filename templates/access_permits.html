@@ -1,0 +1,171 @@
+<!doctype html><html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>طلبات تصاريح التشغيل والصيانة</title><link rel="stylesheet" href="/static/style.css">
+
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shalfa Ops">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+</head><body><div class="app-layout"><aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside><section class="content">
+<header class="approved-topbar"><div class="topbar-title">
+<h1>طلبات تصاريح التشغيل والصيانة</h1>
+<p>{% if is_external %}إنشاء الطلب ومتابعة الموافقة وإثبات الدخول والمغادرة{% else %}إدارة واعتماد طلبات التشغيل والصيانة والنظافة والمقاولين{% endif %}</p>
+</div><div class="topbar-user"><div><b>{{user.full_name}}</b><small>{{user.external_department or user.role}}</small></div><div class="topbar-avatar">🔧</div></div></header>
+
+<div class="cards access-stats">
+<div class="card">الإجمالي<b>{{stats.total or 0}}</b></div>
+<div class="card">بانتظار الموافقة<b>{{stats.pending or 0}}</b></div>
+<div class="card">معتمد<b>{{stats.approved or 0}}</b></div>
+<div class="card">داخل المدرسة<b>{{stats.inside_count or 0}}</b></div>
+<div class="card">تمت المغادرة<b>{{stats.completed or 0}}</b></div>
+</div>
+
+<div class="two-cols">
+<form class="panel form-grid" method="post" action="/access-permits/create">
+<h3>إنشاء طلب تصريح جديد</h3>
+<label>تاريخ الزيارة<input type="date" name="permit_date" required></label>
+<label>نوع الطلب<select name="visit_type" required>
+<option>تشغيل</option><option>صيانة</option><option>نظافة</option>
+<option>مقاول</option><option>زيارة فنية</option><option>أعمال طارئة</option><option>أخرى</option>
+</select></label>
+<label class="full">المدرسة<select name="ministry_id" required>
+{% for s in schools %}<option value="{{s.ministry_id}}">{{s.city}} — {{s.school_name}} — المنسق: {{s.coordinator_name or 'غير محدد'}}</option>{% endfor %}
+</select></label>
+<label>الشركة / الجهة<input name="company_name" value="{{user.external_company or ''}}"></label>
+<label>رقم أمر العمل<input name="work_order_no"></label>
+<label class="full">أسماء الفنيين / العمال<textarea name="visitor_names" required></textarea></label>
+<label>أرقام الهوية<input name="visitor_ids"></label>
+<label>أرقام الجوال<input name="visitor_mobiles" value="{{user.external_mobile or ''}}"></label>
+<label>لوحة المركبة<input name="vehicle_plate"></label>
+<label>وقت الدخول المتوقع<input type="time" name="planned_entry_time"></label>
+<label>وقت الخروج المتوقع<input type="time" name="planned_exit_time"></label>
+<label class="full">وصف الأعمال المطلوبة<textarea name="visit_reason" required></textarea></label>
+<label class="full">ملاحظات<textarea name="notes"></textarea></label>
+<button class="full">إرسال الطلب للمنسق / المشرف</button>
+</form>
+
+<form class="panel form-grid" method="get">
+<h3>البحث والمتابعة</h3>
+<label>من تاريخ<input type="date" name="date_from" value="{{date_from}}"></label>
+<label>إلى تاريخ<input type="date" name="date_to" value="{{date_to}}"></label>
+<label>المدينة<select name="city"><option value="">كل المناطق</option>{% for x in cities %}<option value="{{x}}" {% if city==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></label>
+<label>نوع الطلب<select name="visit_type"><option value="">الكل</option><option>تشغيل</option><option>صيانة</option><option>نظافة</option><option>مقاول</option><option>زيارة فنية</option><option>أعمال طارئة</option></select></label>
+<label>حالة الموافقة<select name="approval_status"><option value="">الكل</option><option>بانتظار الموافقة</option><option>موافق</option><option>مرفوض</option></select></label>
+<label>الحالة الفعلية<select name="actual_status"><option value="">الكل</option><option>لم يدخل</option><option>داخل المدرسة</option><option>تم الخروج</option></select></label>
+<button class="full">عرض</button>
+{% if not is_external %}<a class="full export" href="/access-permits.xlsx?date_from={{date_from}}&date_to={{date_to}}&city={{city}}&visit_type={{visit_type}}">تصدير Excel</a>{% endif %}
+</form>
+</div>
+
+<div class="permit-grid">
+{% for r in rows %}
+<article class="permit-card status-{{r.actual_status|replace(' ','-')}}">
+<div class="permit-head"><div><h3>{{r.school_name}}</h3><span>{{r.city}} — {{r.permit_date}} — {{r.visit_type}}</span></div><b>{{r.approval_status}}</b></div>
+<div class="permit-info">
+<p><strong>طالب التصريح:</strong> {{r.requester_name or '—'}}<br>
+<strong>القسم:</strong> {{r.requester_department or '—'}}<br>
+<strong>الشركة:</strong> {{r.requester_company or r.company_name or '—'}}<br>
+<strong>الفريق:</strong> {{r.visitor_names}}<br>
+<strong>أمر العمل:</strong> {{r.work_order_no or '—'}}</p>
+<p><strong>المنسق:</strong> {{r.coordinator_name or '—'}}<br>
+<strong>الدخول المتوقع:</strong> {{r.planned_entry_time or '—'}}<br>
+<strong>المغادرة المتوقعة:</strong> {{r.planned_exit_time or '—'}}<br>
+<strong>الحالة:</strong> {{r.actual_status}}</p>
+</div>
+
+{% if not is_external and r.approval_status=='بانتظار الموافقة' %}
+<form method="post" action="/access-permits/{{r.id}}/approve" class="inline-form">
+<input type="hidden" name="decision" value="موافق"><input name="notes" placeholder="ملاحظات الموافقة"><button>✅ موافقة</button></form>
+<form method="post" action="/access-permits/{{r.id}}/approve" class="inline-form">
+<input type="hidden" name="decision" value="مرفوض"><input name="notes" placeholder="سبب الرفض"><button class="danger-btn">❌ رفض</button></form>
+{% endif %}
+
+{% if is_external and r.approval_status=='موافق' and r.actual_status=='لم يدخل' %}
+<form method="post" enctype="multipart/form-data" action="/access-permits/{{r.id}}/external-entry" class="entry-form verified-form">
+<input type="file" name="entry_photo" accept="image/*" capture="environment" required>
+<input name="entry_latitude" class="entry-lat" placeholder="خط العرض" readonly>
+<input name="entry_longitude" class="entry-lng" placeholder="خط الطول" readonly>
+<input name="notes" placeholder="ملاحظات الدخول">
+<button type="button" onclick="setPermitGPS(this,'entry')">📍 تثبيت الموقع</button>
+<button class="verify-btn">📸 إثبات الدخول</button></form>
+{% endif %}
+
+{% if is_external and r.actual_status=='داخل المدرسة' %}
+<form method="post" enctype="multipart/form-data" action="/access-permits/{{r.id}}/external-exit" class="entry-form verified-form">
+<input type="file" name="exit_photo" accept="image/*" capture="environment" required>
+<input name="exit_latitude" class="exit-lat" placeholder="خط العرض" readonly>
+<input name="exit_longitude" class="exit-lng" placeholder="خط الطول" readonly>
+<textarea name="work_summary" placeholder="ملخص الأعمال المنفذة" required></textarea>
+<input name="notes" placeholder="ملاحظات المغادرة">
+<button type="button" onclick="setPermitGPS(this,'exit')">📍 تثبيت الموقع</button>
+<button class="verify-btn">📸 إثبات المغادرة</button></form>
+{% endif %}
+
+<div class="permit-timeline">
+الموافقة: {{r.approved_by_name or '—'}} |
+الدخول: {{r.entry_time or '—'}} |
+المغادرة: {{r.exit_time or '—'}}
+{% if r.work_summary %}<br><b>الأعمال المنفذة:</b> {{r.work_summary}}{% endif %}
+{% if r.entry_photo_path %}<br><a href="/evidence/{{r.entry_photo_path}}" target="_blank">صورة الدخول</a>{% endif %}
+{% if r.exit_photo_path %} | <a href="/evidence/{{r.exit_photo_path}}" target="_blank">صورة المغادرة</a>{% endif %}
+</div>
+</article>
+{% endfor %}
+</div>
+
+<script>
+function setPermitGPS(btn,type){
+ navigator.geolocation.getCurrentPosition(p=>{
+  const f=btn.closest('form');
+  f.querySelector('.'+type+'-lat').value=p.coords.latitude;
+  f.querySelector('.'+type+'-lng').value=p.coords.longitude;
+ },()=>alert('يرجى السماح باستخدام الموقع'));
+}
+</script>
+</section></div><script src="/static/pwa.js" defer></script>
+</body></html>

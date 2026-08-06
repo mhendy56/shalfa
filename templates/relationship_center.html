@@ -1,0 +1,84 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>مركز الربط والمزامنة</title>
+<link rel="stylesheet" href="/static/style.css"><style>
+.rel-wrap{max-width:1600px;margin:auto}.rel-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.rel-card{background:#fff;border:1px solid #dfe7f1;border-radius:13px;padding:14px}.rel-card b{display:block;font-size:28px;color:#176fe5}
+.rel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.rel-table{width:100%;border-collapse:collapse}
+.rel-table th,.rel-table td{padding:8px;border-bottom:1px solid #e8eef5;text-align:right;font-size:12px}.rel-table th{background:#082b60;color:white;position:sticky;top:0}
+.rel-scroll{max-height:360px;overflow:auto}.rel-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.rel-actions button,.rel-actions a{padding:11px 16px;border:0;border-radius:8px;background:#1267df;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}
+.live-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 5px #dcfce7;margin-left:8px}
+@media(max-width:900px){.rel-kpis{grid-template-columns:1fr 1fr}.rel-grid{grid-template-columns:1fr}}
+</style></head><body><div class="app-layout"><aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside>
+<section class="content rel-wrap"><div class="hero compact"><h1><span class="live-dot"></span>مركز الربط والمزامنة</h1>
+<p>مصدر موحد للمدارس والبوابين والمنسقين / المشرفين — تحديث مباشر لجميع الشاشات</p></div>
+<div class="rel-kpis">
+<div class="rel-card"><span>المدارس</span><b id="k-schools">{{summary.schools}}</b></div>
+<div class="rel-card"><span>البوابون النشطون</span><b id="k-guards">{{summary.guards}}</b></div>
+<div class="rel-card"><span>المنسقون / المشرفون</span><b id="k-coords">{{summary.coordinators}}</b></div>
+<div class="rel-card"><span>تعارض ربط البواب</span><b id="k-duplicates">{{summary.duplicate_guard_links}}</b></div>
+<div class="rel-card"><span>مدارس بدون بواب</span><b id="k-no-guard">{{summary.schools_without_guard}}</b></div>
+<div class="rel-card"><span>مدارس بدون منسق</span><b id="k-no-coord">{{summary.schools_without_coordinator}}</b></div>
+<div class="rel-card"><span>بوابون غير مرتبطين</span><b id="k-unlinked">{{summary.unlinked_guards}}</b></div>
+<div class="rel-card"><span>منسقون بدون مدارس</span><b id="k-coord-empty">{{summary.coordinators_without_schools}}</b></div>
+</div>
+<div class="rel-actions">
+<form method="post" action="/relationship-center/repair"><input type="hidden" name="action" value="reconcile"><button>🔄 مزامنة وإصلاح الفروقات</button></form>
+<form method="post" action="/relationship-center/repair" onsubmit="return confirm('سيتم فك ربط البواب من المدارس المكررة والإبقاء على مدرسة واحدة. متابعة؟')"><input type="hidden" name="action" value="duplicate_guards"><button style="background:#b42318">🧹 إصلاح ربط البواب المكرر</button></form>
+<a href="/unlinked-guards">ربط البوابين</a><a href="/coordinators">إدارة المنسقين</a><a href="/school-reports">التقارير الشاملة</a>
+</div>
+<div class="rel-grid">
+<article class="rel-card"><h3>مدارس بدون بواب</h3><div class="rel-scroll"><table class="rel-table"><tr><th>الرقم</th><th>المدرسة</th><th>المدينة</th><th>المنسق</th></tr>{% for r in no_guard %}<tr><td>{{r.ministry_id}}</td><td>{{r.school_name}}</td><td>{{r.city}}</td><td>{{r.coordinator_name or '—'}}</td></tr>{% endfor %}</table></div></article>
+<article class="rel-card"><h3>مدارس بدون منسق / مشرف</h3><div class="rel-scroll"><table class="rel-table"><tr><th>الرقم</th><th>المدرسة</th><th>المدينة</th><th>البواب</th></tr>{% for r in no_coord %}<tr><td>{{r.ministry_id}}</td><td>{{r.school_name}}</td><td>{{r.city}}</td><td>{{r.guard_name or '—'}}</td></tr>{% endfor %}</table></div></article>
+<article class="rel-card"><h3>البوابون غير المرتبطين</h3><div class="rel-scroll"><table class="rel-table"><tr><th>الرقم</th><th>الاسم</th><th>الجوال</th></tr>{% for r in unlinked_guards %}<tr><td>{{r.emp_id}}</td><td>{{r.emp_name}}</td><td>{{r.mobile or '—'}}</td></tr>{% endfor %}</table></div></article>
+<article class="rel-card"><h3>مدارس بدون إحداثيات</h3><div class="rel-scroll"><table class="rel-table"><tr><th>الرقم</th><th>المدرسة</th><th>المدينة</th></tr>{% for r in no_coords %}<tr><td>{{r.ministry_id}}</td><td>{{r.school_name}}</td><td>{{r.city}}</td></tr>{% endfor %}</table></div></article>
+<article class="rel-card"><h3>تعارضات البوابين</h3><div class="rel-scroll"><table class="rel-table"><tr><th>الرقم الوظيفي</th><th>البواب</th><th>عدد المدارس</th></tr>{% for r in duplicate_guards %}<tr><td>{{r.guard_emp_id}}</td><td>{{r.guard_name}}</td><td>{{r.school_count}}</td></tr>{% endfor %}</table></div></article>
+<article class="rel-card"><h3>آخر تغييرات الربط</h3><div class="rel-scroll" id="live-events">{% for r in events %}<p><b>{{r.action}}</b> — {{r.entity_type}} / {{r.entity_id}}<br><small>{{r.created_at}}</small></p>{% endfor %}</div></article>
+</div></section></div>
+<script src="/static/pwa.js" defer></script><script>
+let lastId={{summary.last_event_id or 0}};
+function applySummary(s){const map={schools:'k-schools',guards:'k-guards',coordinators:'k-coords',duplicate_guard_links:'k-duplicates',schools_without_guard:'k-no-guard',schools_without_coordinator:'k-no-coord',unlinked_guards:'k-unlinked',coordinators_without_schools:'k-coord-empty'};Object.entries(map).forEach(([k,id])=>{const e=document.getElementById(id);if(e)e.textContent=s[k]??0;});}
+const stream=new EventSource('/relationship-events/stream?since='+lastId);
+stream.onmessage=(ev)=>{const d=JSON.parse(ev.data);applySummary(d.summary||{});lastId=d.last_id||lastId;const box=document.getElementById('live-events');(d.events||[]).reverse().forEach(x=>{const p=document.createElement('p');p.innerHTML=`<b>${x.action}</b> — ${x.entity_type} / ${x.entity_id}<br><small>${x.created_at}</small>`;box.prepend(p);});};
+</script></body></html>

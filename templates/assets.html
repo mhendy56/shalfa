@@ -1,0 +1,66 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>إدارة العهد</title><link rel="stylesheet" href="/static/style.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shalfa Ops">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+</head><body><div class="app-layout">
+<aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside>
+
+
+<section class="content">
+<div class="hero compact"><div><h1>إدارة العهد والمعدات</h1><p>تسليم واستلام أجهزة ومفاتيح وعهد الحراس والمواقع.</p></div></div>
+<form class="panel form-grid" method="post" action="/assets/save"><h3>إضافة عهدة</h3>
+<label>نوع العهدة<select name="asset_type"><option>جهاز لاسلكي</option><option>مفتاح</option><option>كشاف</option><option>جهاز بصمة</option><option>زي</option><option>مركبة</option><option>أخرى</option></select></label>
+<label>كود العهدة<input name="asset_code"></label><label>اسم العهدة<input name="asset_name"></label><label>الرقم التسلسلي<input name="serial_number"></label>
+<label class="full">الموقع<select name="ministry_id">{% for s in schools %}<option value="{{s.ministry_id}}">{{s.city}} — {{s.school_name}} — {{s.guard_name}}</option>{% endfor %}</select></label>
+<label>رقم الحارس<input name="assigned_guard_emp_id"></label><label>الكمية<input name="quantity" type="number" value="1"></label>
+<label>الحالة<select name="condition_status"><option>جيدة</option><option>تحتاج صيانة</option><option>تالفة</option><option>مفقودة</option></select></label><label>تاريخ التسليم<input type="date" name="received_date"></label>
+<label class="full">ملاحظات<textarea name="notes"></textarea></label><button class="full">حفظ</button></form>
+<div class="table-wrap"><table><thead><tr><th>النوع</th><th>الكود</th><th>الاسم</th><th>التسلسلي</th><th>الموقع</th><th>الحارس</th><th>الكمية</th><th>الحالة</th><th>التسليم</th><th>ملاحظات</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{r.asset_type}}</td><td>{{r.asset_code}}</td><td>{{r.asset_name}}</td><td>{{r.serial_number}}</td><td>{{r.school_name}}</td><td>{{r.assigned_guard_name}} / {{r.assigned_guard_emp_id}}</td><td>{{r.quantity}}</td><td>{{r.condition_status}}</td><td>{{r.received_date}}</td><td>{{r.notes}}</td></tr>{% endfor %}</tbody></table></div>
+</section></div><script src="/static/pwa.js" defer></script>
+</body></html>

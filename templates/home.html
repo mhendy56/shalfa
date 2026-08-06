@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{settings.system_name or 'نظام شلفا'}}</title>
+<link rel="stylesheet" href="/static/style.css">
+
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shalfa Ops">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+</head>
+<body class="executive-body">
+<div class="app-layout executive-home-layout">
+
+<aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/relationship-center"><span>🔄</span><b>مركز الربط والمزامنة</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a href="/audit-trail"><span>🧾</span><b>سجل التدقيق</b></a>
+<a href="/tasks"><span>✅</span><b>المهام</b></a>
+<a href="/coordinator-mobile"><span>📱</span><b>تطبيق المنسق</b></a>
+<a href="/ask-shalfa"><span>✨</span><b>اسأل شلفا</b></a>
+<a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/fm-employees"><span>👷</span><b>موظفو الصيانة والنظافة</b></a>
+    <a href="/fm-inventory"><span>📋</span><b>حصر الأصول</b></a>
+    <a href="/fm-pricing"><span>💰</span><b>تسعير الأصول</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside>
+
+
+<main class="executive-main app-main">
+
+<header class="approved-topbar">
+  <div class="topbar-title">
+    <h1>{{settings.system_name or 'Shalfa Ops'}}</h1>
+    <p>لوحة التحكم الرئيسية — {{settings.project_name}}</p>
+  </div>
+  <div class="topbar-user">
+    <div><b>{{user.full_name}}</b><small>{{user.role}}</small></div>
+    <div class="topbar-avatar">👤</div>
+    <div class="notification-bell">🔔<i>{{operations.pending_permits or 0}}</i></div>
+  </div>
+</header>
+
+
+<section class="approved-info-strip">
+  <article><span>🟢</span><div><small>حالة النظام</small><b>متصل ومستقر</b></div></article>
+  <article><span>👤</span><div><small>إعداد وإشراف عام</small><b>{{settings.prepared_by}}</b></div></article>
+  <article><span>📁</span><div><small>المشروع</small><b>{{settings.project_name}}</b></div></article>
+  <article><span>📅</span><div><small>التاريخ</small><b>{{today}}</b></div></article>
+  <article><span>💻</span><div><small>إصدار البرنامج</small><b>{{settings.system_version}}</b></div></article>
+</section>
+
+<section class="executive-panel org-section">
+  <div class="section-title"><h2>الهيكل الإداري</h2><span>🏢</span></div>
+  <div class="org-line">
+    <article class="org-role purple-role"><div class="role-icon">👔</div><small>مدير خدمات أعمال البوابين</small><b>{{settings.gate_services_manager}}</b><a href="tel:{{settings.gate_services_manager_mobile}}">{{settings.gate_services_manager_mobile}}</a></article>
+    <article class="org-role blue-role"><div class="role-icon">🛡️</div><small>مدير قطاع الخدمات الأمنية</small><b>{{settings.security_sector_manager}}</b><a href="tel:{{settings.security_sector_manager_mobile}}">{{settings.security_sector_manager_mobile}}</a></article>
+    <article class="org-role green-role"><div class="role-icon">👷</div><small>المشرف العام</small><b>{{settings.general_supervisor}}</b><a href="tel:{{settings.general_supervisor_mobile}}">{{settings.general_supervisor_mobile}}</a></article>
+    <article class="org-role gold-role"><div class="role-icon">⭐</div><small>إعداد وإشراف عام</small><b>{{settings.prepared_by}}</b><a href="tel:{{settings.prepared_by_mobile}}">{{settings.prepared_by_mobile}}</a></article>
+  </div>
+</section>
+
+<section class="metric-grid">
+  <article class="metric-card teal"><span>✅</span><small>نسبة التغطية اليوم</small><b>{{'%.1f'|format(coverage)}}%</b><em>حضور وبدلاء</em></article>
+  <article class="metric-card violet"><span>🛡️</span><small>الجولات اليوم</small><b>{{operations.tours_today or 0}}</b><em>جولة</em></article>
+  <article class="metric-card redtone"><span>⚠️</span><small>المخالفات اليوم</small><b>{{operations.violations_today or 0}}</b><em>مخالفة</em></article>
+  <article class="metric-card green"><span>🚪</span><small>فرق داخل المدارس</small><b>{{operations.teams_inside or 0}}</b><em>فريق</em></article>
+  <article class="metric-card blue"><span>👥</span><small>إجمالي البوابين</small><b>{{totals.guards}}</b><em>بواب</em></article>
+  <article class="metric-card orange"><span>🏫</span><small>إجمالي المدارس</small><b>{{totals.total}}</b><em>مدرسة</em></article>
+</section>
+
+<section class="executive-panel services-section">
+  <div class="section-title"><h2>الخدمات الرئيسية</h2><span>▦</span></div>
+  <div class="executive-services">
+    <a href="/security-dashboard" class="svc purple"><span>🎯</span><b>غرفة العمليات</b><small>المؤشرات المباشرة</small></a>
+    <a href="/map" class="svc green"><span>🗺️</span><b>الخريطة التفاعلية</b><small>المدارس والمواقع</small></a>
+    <a href="/attendance" class="svc blue"><span>✅</span><b>الحضور والانصراف</b><small>التسجيل اليومي</small></a>
+    <a href="/guard-tours" class="svc amber"><span>🛡️</span><b>الجولات الأمنية</b><small>GPS ونقاط التفتيش</small></a>
+    <a href="/access-permits" class="svc teal"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b><small>دخول وخروج موثق</small></a>
+    <a href="/incidents" class="svc red"><span>🚨</span><b>البلاغات والحوادث</b><small>المتابعة والإغلاق</small></a>
+    <a href="/violations" class="svc orange"><span>⚠️</span><b>المخالفات والإنذارات</b><small>إجراءات الحراس</small></a>
+    <a href="/assets" class="svc brown"><span>🔑</span><b>العهد والمعدات</b><small>التسليم والاستلام</small></a>
+    <a href="/shifts" class="svc blue"><span>🕘</span><b>الورديات والعجز</b><small>المطلوب والمسكن</small></a>
+    <a href="/evaluations" class="svc amber"><span>⭐</span><b>تقييم الحراس</b><small>الانضباط والأداء</small></a>
+    <a href="/documents" class="svc purple"><span>📁</span><b>المستندات</b><small>الانتهاء والتنبيهات</small></a>
+    <a href="/schools" class="svc green"><span>🏫</span><b>المدارس والبوابون</b><small>البيانات والبحث</small></a>
+    <a href="/coordinators" class="svc teal"><span>👥</span><b>المنسقون</b><small>التوزيع والأداء</small></a>
+    <a href="/school-import" class="svc green"><span>📥</span><b>تحديث Excel</b><small>تحديث البيانات الذكي</small></a>
+    <a href="/reports" class="svc blue"><span>📊</span><b>التقارير</b><small>Excel والتقارير التشغيلية</small></a>
+    <a href="/users" class="svc purple"><span>👤</span><b>إدارة المستخدمين</b><small>الحسابات والصلاحيات</small></a>
+    <a href="/system-settings" class="svc slate"><span>⚙️</span><b>إعدادات النظام</b><small>الهيكل والبرنامج</small></a>
+    <a href="/logout" class="svc red"><span>↪</span><b>خروج</b><small>إنهاء الجلسة</small></a>
+  </div>
+</section>
+
+<section class="live-grid">
+  <article><div><span>🔴</span><b>مدارس لم تسجل اليوم</b></div><strong>{{unrecorded}}</strong><a href="/attendance">عرض التفاصيل</a></article>
+  <article><div><span>🚨</span><b>بلاغات مفتوحة</b></div><strong>{{operations.open_incidents or 0}}</strong><a href="/incidents">متابعة البلاغات</a></article>
+  <article><div><span>📋</span><b>تصاريح بانتظار الموافقة</b></div><strong>{{operations.pending_permits or 0}}</strong><a href="/access-permits">فتح التصاريح</a></article>
+</section>
+
+<footer class="executive-footer"><span>إعداد وإشراف عام: {{settings.prepared_by}}</span><b>{{settings.system_name}}</b><span>جميع الحقوق محفوظة © 2026</span></footer>
+</main>
+</div>
+<script src="/static/pwa.js" defer></script>
+</body>
+</html>

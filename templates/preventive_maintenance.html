@@ -1,0 +1,53 @@
+<!doctype html><html lang="ar" dir="rtl"><head><title>خطة الصيانة الوقائية</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/static/style.css"><style>
+.fm-wrap{max-width:1600px;margin:auto}.fm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.fm-card{background:#fff;border:1px solid #dfe7f1;border-radius:14px;padding:14px;box-shadow:0 5px 18px rgba(8,43,96,.05)}.fm-card b{display:block;font-size:28px;color:#176fe5}.fm-form{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.fm-form input,.fm-form select,.fm-form textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-top:4px}.fm-btn{padding:10px 15px;border:0;border-radius:8px;background:#1267df;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}.fm-table{width:100%;border-collapse:collapse;background:#fff}.fm-table th,.fm-table td{padding:8px;border-bottom:1px solid #e8eef5;text-align:right;font-size:12px}.fm-table th{background:#082b60;color:#fff;position:sticky;top:0}.fm-scroll{max-height:65vh;overflow:auto;border-radius:12px}.fm-badge{display:inline-block;padding:5px 9px;border-radius:99px;background:#eef3f8}.fm-danger{background:#feecec;color:#b42318}.fm-success{background:#e8f7ee;color:#16813b}@media(max-width:900px){.fm-grid{grid-template-columns:1fr 1fr}.fm-form{grid-template-columns:1fr}}
+</style></head><body><div class="app-layout"><aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/relationship-center"><span>🔄</span><b>مركز الربط والمزامنة</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a href="/audit-trail"><span>🧾</span><b>سجل التدقيق</b></a>
+<a href="/tasks"><span>✅</span><b>المهام</b></a>
+<a href="/coordinator-mobile"><span>📱</span><b>تطبيق المنسق</b></a>
+<a href="/ask-shalfa"><span>✨</span><b>اسأل شلفا</b></a>
+<a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/fm-employees"><span>👷</span><b>موظفو الصيانة والنظافة</b></a>
+    <a href="/fm-inventory"><span>📋</span><b>حصر الأصول</b></a>
+    <a href="/fm-pricing"><span>💰</span><b>تسعير الأصول</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside><section class="content fm-wrap"><div class="hero compact"><h1>خطة الصيانة الوقائية</h1></div>
+<div class="fm-card"><form class="fm-form" method="post" action="/preventive-maintenance/create"><label>اسم الخطة<input name="plan_name" required></label><label>الأصل<select name="asset_id">{% for a in assets %}<option value="{{a.id}}">{{a.school_name}} — {{a.asset_type}} — {{a.asset_code}}</option>{% endfor %}</select></label><label>التكرار بالأيام<input type="number" name="frequency_days" value="90"></label><label>الفريق المكلف<input name="assigned_team"></label><label>الأولوية<select name="priority"><option>منخفض</option><option selected>متوسط</option><option>مرتفع</option></select></label><label>موعد الاستحقاق القادم<input type="date" name="next_due_date" required></label><label style="grid-column:1/-1">قائمة الفحص<textarea name="checklist"></textarea></label><button class="fm-btn">حفظ الخطة</button></form></div><p><form method="post" action="/preventive-maintenance/generate"><button class="fm-btn">إنشاء أوامر العمل المستحقة الآن</button></form></p><div class="fm-scroll"><table class="fm-table"><tr><th>الخطة</th><th>المدرسة</th><th>الأصل</th><th>التكرار</th><th>الفريق</th><th>الموعد القادم</th></tr>{% for r in plans %}<tr><td>{{r.plan_name}}</td><td>{{r.school_name}}</td><td>{{r.asset_code}} — {{r.asset_name}}</td><td>{{r.frequency_days}} يوم</td><td>{{r.assigned_team}}</td><td>{{r.next_due_date}}</td></tr>{% endfor %}</table></div></section></div><script src="/static/pwa.js" defer></script></body></html>

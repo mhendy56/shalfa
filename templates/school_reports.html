@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تقارير المدارس الشاملة</title><link rel="stylesheet" href="/static/style.css">
+<style>
+.report-shell{max-width:1600px;margin:auto}.report-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.report-filters label{font-size:12px;color:#52647b}.report-filters select,.report-filters input{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:4px}
+.report-actions-pro{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.report-actions-pro a,.report-actions-pro button{padding:11px 18px;border-radius:8px;border:0;text-decoration:none;font-weight:800;cursor:pointer}
+.primary{background:#1267df;color:#fff}.success{background:#16813b;color:#fff}.secondary{background:#eef3f8;color:#082b60}
+.report-types{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}.report-types a{padding:12px;border:1px solid #dbe5f0;border-radius:10px;background:#fff;text-decoration:none;color:#082b60;text-align:center;font-weight:800}.report-types a.active{background:#082b60;color:#fff}
+.report-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}.report-kpi{background:#fff;border:1px solid #dfe7f1;border-radius:13px;padding:14px}.report-kpi b{display:block;font-size:27px;color:#176fe5}
+.report-table-wrap{overflow:auto;max-height:65vh;border:1px solid #dfe7f1;border-radius:12px}.report-table{border-collapse:collapse;width:100%;min-width:1600px;background:#fff}.report-table th,.report-table td{padding:8px;border-bottom:1px solid #e8eef5;white-space:nowrap;text-align:right;font-size:12px}.report-table th{background:#082b60;color:#fff;position:sticky;top:0}
+@media(max-width:900px){.report-filters{grid-template-columns:1fr 1fr}.report-types{grid-template-columns:1fr 1fr}.report-summary{grid-template-columns:1fr 1fr}}
+</style></head><body><div class="app-layout">
+<aside class="app-sidebar">
+  <div class="app-brand">
+    <div class="app-brand-logos">
+      <img src="/static/shalfa-logo.png" alt="شعار شلفا"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+      <span class="logo-fallback">شلفا</span>
+      <img src="/static/tbc-logo.png" alt="TBC"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+  <nav class="app-nav">
+    <a href="/home"><span>🏠</span><b>الرئيسية</b></a>
+    <a href="/map"><span>🗺️</span><b>الخريطة التفاعلية</b></a>
+    <a href="/attendance"><span>✅</span><b>الحضور اليومي</b></a>
+    <a href="/period-report"><span>📅</span><b>تقارير الحضور</b></a>
+    <a href="/security-dashboard"><span>🎯</span><b>غرفة العمليات</b></a>
+    <a href="/access-permits"><span>🚪</span><b>طلبات تصاريح التشغيل والصيانة</b></a>
+    <a href="/incidents"><span>🚨</span><b>البلاغات والحوادث</b></a>
+    <a href="/violations"><span>⚠️</span><b>المخالفات والإنذارات</b></a>
+    <a href="/guard-tours"><span>🛡️</span><b>الجولات الأمنية</b></a>
+    <a href="/assets"><span>🔑</span><b>العهد والمفاتيح</b></a>
+    <a href="/shifts"><span>🕘</span><b>الورديات والعجز</b></a>
+    <a href="/evaluations"><span>⭐</span><b>تقييم الحراس</b></a>
+    <a href="/documents"><span>🪪</span><b>انتهاء المستندات</b></a>
+    <a href="/schools"><span>🏫</span><b>المدارس والبوابون</b></a>
+<a href="/unlinked-guards"><span>🔗</span><b>ربط البوابين</b></a>
+    <a href="/coordinators"><span>👥</span><b>إدارة المنسقين / المشرفين</b></a>
+    
+    <a href="/data-quality"><span>🛠️</span><b>مركز جودة البيانات</b></a>
+    <a href="/coordinates"><span>📍</span><b>إدارة الإحداثيات</b></a>
+    <a href="/school-import"><span>📥</span><b>تحديث بيانات المدارس</b></a>
+    <a href="/reports"><span>📊</span><b>التقارير</b></a>
+    <a href="/client-dashboard"><span>📈</span><b>لوحة العميل</b></a>
+    <a href="/users"><span>👤</span><b>إدارة المستخدمين</b></a>
+    <a href="/system-settings"><span>⚙️</span><b>إعدادات النظام</b></a>
+    <a class="logout-link" href="/logout"><span>↪️</span><b>خروج</b></a>
+  
+    <a href="/fm-dashboard"><span>🛠️</span><b>الصيانة والنظافة</b></a>
+    <a href="/maintenance-work-orders"><span>🔧</span><b>أوامر الصيانة</b></a>
+    <a href="/cleaning-quality"><span>🧹</span><b>النظافة والجودة</b></a>
+  </nav>
+</aside>
+<section class="content report-shell"><div class="hero compact"><h1>📊 تقارير المدارس والبوابين والمنسقين</h1><p>تصدير شامل لجميع بيانات المدرسة والبواب والمنسق / المشرف</p></div>
+
+<div class="report-types">
+{% set types=[
+ ('all','التقرير الشامل'),('without_guard','مدارس بدون بواب'),('without_coordinator','مدارس بدون منسق'),
+ ('missing_coordinates','بدون إحداثيات'),('main_schools','المدارس الرئيسية'),('branch_schools','المدارس الفرعية'),
+ ('annex_schools','المدارس الملحقة'),('closed_schools','المدارس المغلقة'),('merged_schools','المدارس المدمجة')
+] %}
+{% for value,label in types %}
+<a class="{{'active' if report_type==value else ''}}" href="?report_type={{value}}">{{label}}</a>
+{% endfor %}
+</div>
+
+<form class="card report-filters" method="get">
+<input type="hidden" name="report_type" value="{{report_type}}">
+<label>المدينة<select name="city"><option value="">كل المدن</option>{% for x in cities %}<option value="{{x}}" {{'selected' if city==x else ''}}>{{x}}</option>{% endfor %}</select></label>
+<label>المنسق / المشرف<select name="coordinator"><option value="">كل المنسقين</option>{% for x in coords %}<option value="{{x}}" {{'selected' if coordinator==x else ''}}>{{x}}</option>{% endfor %}</select></label>
+<label>حالة المدرسة<select name="school_status"><option value="">كل الحالات</option>{% for x in statuses %}<option value="{{x}}" {{'selected' if school_status==x else ''}}>{{x}}</option>{% endfor %}</select></label>
+<label>التصنيف التشغيلي<select name="operational_type"><option value="">الكل</option>{% for x in operational_types %}<option value="{{x}}" {{'selected' if operational_type==x else ''}}>{{x}}</option>{% endfor %}</select></label>
+<label>النوع<select name="gender"><option value="">بنين وبنات</option>{% for x in genders %}<option value="{{x}}" {{'selected' if gender==x else ''}}>{{x}}</option>{% endfor %}</select></label>
+<label style="grid-column:span 2">بحث<input name="q" value="{{q}}" placeholder="رقم وزاري، مدرسة، بواب، رقم وظيفي، منسق"></label>
+<button class="primary" type="submit">تطبيق الفلاتر</button>
+</form>
+
+<div class="report-summary">
+<div class="report-kpi"><span>نتائج التقرير</span><b>{{total_rows}}</b></div>
+<div class="report-kpi"><span>المعروض في المعاينة</span><b>{{rows|length}}</b></div>
+<div class="report-kpi"><span>المدارس ببواب</span><b>{{rows|selectattr('guard_emp_id')|list|length if 'guard_emp_id' in columns else 0}}</b></div>
+<div class="report-kpi"><span>المدارس بمنسق</span><b>{{rows|selectattr('coordinator_name')|list|length if 'coordinator_name' in columns else 0}}</b></div>
+</div>
+
+{% set qs='report_type='~report_type~'&city='~city~'&coordinator='~coordinator~'&school_status='~school_status~'&operational_type='~operational_type~'&gender='~gender~'&q='~q %}
+<div class="report-actions-pro">
+<a class="success" href="/school-reports.xlsx?{{qs}}">⬇️ تصدير Excel شامل</a>
+<a class="primary" target="_blank" href="/school-reports/print?{{qs}}">🖨️ طباعة / حفظ PDF</a>
+<a class="secondary" href="/school-reports?report_type=all">إعادة ضبط</a>
+</div>
+
+<div class="report-table-wrap"><table class="report-table"><thead><tr>
+{% for c in columns[:19] %}<th>{{labels.get(c,c)}}</th>{% endfor %}
+</tr></thead><tbody>
+{% for r in rows %}<tr>{% for c in columns[:19] %}<td>{{r[c] if r[c] is not none else ''}}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div>
+{% if total_rows>500 %}<p class="muted">المعاينة تعرض أول 500 سجل، بينما ملف Excel يحتوي على جميع النتائج.</p>{% endif %}
+</section></div><script src="/static/pwa.js" defer></script></body></html>

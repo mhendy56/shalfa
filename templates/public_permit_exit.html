@@ -1,0 +1,11 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>إثبات الخروج</title><link rel="stylesheet" href="/static/style.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#082b60">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shalfa Ops">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+</head><body class="public-page"><main class="public-card"><img src="/static/shalfa-logo.png"><h1>إثبات انتهاء العمل والخروج</h1><div class="permit-summary"><b>{{permit.school_name}}</b><p>{{permit.city}} — {{permit.visit_type}}</p><p>أمر العمل: {{permit.work_order_no or '—'}}<br>الدخول المثبت: {{permit.entry_time or 'غير مسجل'}}</p></div>{% if permit.actual_status=='داخل المدرسة' %}<form method="post" enctype="multipart/form-data"><input name="representative_name" placeholder="اسم ممثل فريق الصيانة/النظافة" required><input name="school_closed_by" placeholder="اسم البواب أو المشرف الذي أغلق المدرسة" required><input type="file" name="exit_photo" accept="image/*" capture="environment" required><input name="exit_latitude" id="lat" placeholder="خط العرض" readonly><input name="exit_longitude" id="lng" placeholder="خط الطول" readonly><textarea name="notes" placeholder="ملاحظات إنهاء العمل"></textarea><button type="button" onclick="navigator.geolocation.getCurrentPosition(p=>{lat.value=p.coords.latitude;lng.value=p.coords.longitude},()=>alert('فعّل إذن الموقع'))">📍 تثبيت الموقع</button><button class="verify-btn">📸 إثبات الخروج وإغلاق المدرسة</button></form>{% else %}<div class="result-box">لا يمكن استخدام الرابط في الحالة الحالية: {{permit.actual_status}}</div>{% endif %}</main><script src="/static/pwa.js" defer></script>
+</body></html>

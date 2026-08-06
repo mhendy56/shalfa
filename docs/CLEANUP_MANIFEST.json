@@ -1,0 +1,143 @@
+{
+  "version": "V18 Clean",
+  "removed_files_count": 24,
+  "removed_size_bytes": 27078402,
+  "removed": [
+    {
+      "file": "DEPLOY_FIX_README_AR.txt",
+      "reason": "تعليمات إصلاح قديمة خاصة بإصدار سابق",
+      "size": 821
+    },
+    {
+      "file": "README_ENTERPRISE_AR.md",
+      "reason": "محتوى مكرر؛ تم دمجه في README الرئيسي",
+      "size": 484
+    },
+    {
+      "file": "static/README.txt",
+      "reason": "ملف تعريفي فارغ/قديم",
+      "size": 37
+    },
+    {
+      "file": "templates/README.txt",
+      "reason": "ملف تعريفي فارغ/قديم",
+      "size": 38
+    },
+    {
+      "file": "smoke_test.py",
+      "reason": "اختبار قديم مكرر؛ الاختبارات موجودة داخل tests/",
+      "size": 57
+    },
+    {
+      "file": "static/maps/qassim.html",
+      "reason": "خرائط HTML قديمة ثابتة وغير مرتبطة بالشاشة الحالية",
+      "size": 11663238
+    },
+    {
+      "file": "static/maps/albukayriyah.html",
+      "reason": "خرائط HTML قديمة ثابتة وغير مرتبطة بالشاشة الحالية",
+      "size": 649424
+    },
+    {
+      "file": "static/maps/alrass.html",
+      "reason": "خرائط HTML قديمة ثابتة وغير مرتبطة بالشاشة الحالية",
+      "size": 1589426
+    },
+    {
+      "file": "static/maps/unaizah.html",
+      "reason": "خرائط HTML قديمة ثابتة وغير مرتبطة بالشاشة الحالية",
+      "size": 1367693
+    },
+    {
+      "file": "static/maps/almithnab.html",
+      "reason": "خرائط HTML قديمة ثابتة وغير مرتبطة بالشاشة الحالية",
+      "size": 678176
+    },
+    {
+      "file": "static/maps/buraidah.html",
+      "reason": "خرائط HTML قديمة ثابتة وغير مرتبطة بالشاشة الحالية",
+      "size": 7955553
+    },
+    {
+      "file": "static/┘à╪»╪º╪▒╪│_╪º┘ä╪¿┘â┘è╪▒┘è╪⌐.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 12796
+    },
+    {
+      "file": "static/╪¼┘à┘è╪╣_┘à╪»╪º╪▒╪│_╪º┘ä┘é╪╡┘è┘à.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 172793
+    },
+    {
+      "file": "static/┘à╪»╪º╪▒╪│_╪¿╪▒┘è╪»╪⌐.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 117999
+    },
+    {
+      "file": "static/V15_1_╪¡╪╢┘ê╪▒_2026-07-24.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 185359
+    },
+    {
+      "file": "static/┘à╪»╪º╪▒╪│_╪º┘ä╪▒╪│.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 26788
+    },
+    {
+      "file": "static/┘à╪»╪º╪▒╪│_╪º┘ä┘à╪░┘å╪¿.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 13026
+    },
+    {
+      "file": "static/V15_╪¬┘é╪▒┘è╪▒_┘à╪▒╪º╪¼╪╣╪⌐_╪º┘ä╪¿┘è╪º┘å╪º╪¬.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 487577
+    },
+    {
+      "file": "static/╪¿┘è╪º┘å╪º╪¬_╪º┘ä┘à╪»╪º╪▒╪│_┘ê╪º┘ä╪¿┘ê╪º╪¿┘è┘å_╪º┘ä┘à╪╡╪¡╪¡╪⌐.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 1727787
+    },
+    {
+      "file": "static/┘à╪»╪º╪▒╪│_╪╣┘å┘è╪▓╪⌐.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 23322
+    },
+    {
+      "file": "static/all_schools.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 173873
+    },
+    {
+      "file": "static/V15_╪¬╪¡╪»┘è╪½_╪º┘ä┘à╪»╪º╪▒╪│_┘ê╪º┘ä╪¿┘ê╪º╪¿┘è┘å.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 110271
+    },
+    {
+      "file": "static/┘é╪º┘ä╪¿_╪º┘ä╪¡╪╢┘ê╪▒_╪º┘ä┘è┘ê┘à┘è.xlsx",
+      "reason": "ملف Excel قديم/نسخة بيانات مدمجة غير مستخدمة في الواجهات الحالية",
+      "size": 120674
+    },
+    {
+      "file": "docs/README_AR.md",
+      "reason": "تمت إعادة تسميته إلى DEPLOYMENT_AR.md",
+      "size": 1190
+    }
+  ],
+  "kept_critical": [
+    "main.py",
+    "app/",
+    "templates/",
+    "static/style.css",
+    "static/pwa.js",
+    "static/sw.js",
+    "static/manifest.webmanifest",
+    "static/school_coordinates.json",
+    "seed_data.json",
+    "requirements.txt",
+    "render.yaml",
+    "Dockerfile",
+    "scripts/migrate_sqlite_to_postgres.py",
+    "tests/"
+  ]
+}

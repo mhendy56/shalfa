@@ -4460,7 +4460,7 @@ def payroll_page(request: Request,month: str=""):
         <section><h2>تسجيل غياب بالرقم الوظيفي أو الاسم أو الهوية</h2><form method="post" action="/payroll/absence"><label>بحث الموظف <input name="search" required placeholder="الرقم الوظيفي / الهوية / الاسم" style="min-width:270px"></label><label>اليوم <input type="date" name="work_date" value="{today}" min="{month}-01" max="{month}-{last}" required></label><label>ملاحظة <input name="notes" maxlength="500"></label><button>تسجيل غياب</button></form><p>لو الاسم متكرر، سيُطلب استخدام الرقم الوظيفي أو الهوية لتجنب تسجيل غياب لشخص آخر. <a href="/payroll?month={month}">العودة للمسير</a></p></section><section><h2>تسجيل إضافي أو خصم / تعديل حالة يوم</h2><form method="post" action="/payroll/daily">
         <label>الموظف <select name="person_id" required>{opts}</select></label>
         <label>اليوم <input type="date" name="work_date" value="{today}" min="{month}-01" max="{month}-{last}" required></label>
-        <label>الحالة <select name="attendance_status"><option value="حاضر">حاضر (افتراضي)</option><option>حاضر</option><option>غائب</option><option>إجازة</option><option>راحة</option></select></label>
+        <label>الحالة <select name="attendance_status"><option value="حاضر">حاضر (افتراضي)</option><option>غائب</option><option>إجازة</option><option>راحة</option></select></label>
         <label>الإضافي (ريال) <input name="overtime_amount" type="number" min="0" step="0.01" value="0" required></label>
         <label>الخصم (ريال) <input name="deduction_amount" type="number" min="0" step="0.01" value="0" required></label>
         <label>ملاحظات <input name="notes" maxlength="500"></label><button>حفظ اليوم</button></form>

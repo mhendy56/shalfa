@@ -168,8 +168,8 @@ function openSchoolCard(s){
         <div><small>النوع</small><b class="blue-value">${display(s.gender)}</b></div>
         <div><small>الحجم</small><b class="green-value">${display(s.size)}</b></div>
       </div>
-      <article class="person-profile guard-profile"><span class="profile-icon">👤</span><small>البواب</small><h2>${display(guardName)}</h2><p>الرقم الوظيفي: ${display(s.guard_emp_id)}<br>الجوال: ${display(s.guard_mobile)}</p>${contactButtons(guardName,s.guard_mobile)}</article>
-      <article class="person-profile coordinator-profile"><span class="profile-icon">👥</span><small>المنسق / المشرف</small><h2>${display(coordName)}</h2><p>الرقم الوظيفي: ${display(s.coordinator_emp_id)}<br>الجوال: ${display(s.coordinator_mobile)}</p>${contactButtons(coordName,s.coordinator_mobile)}</article>
+      <article class="person-profile guard-profile"><span class="profile-icon">👤</span><small>البواب</small><h2>${display(guardName)}</h2><p>الرقم الوظيفي: ${display(s.guard_emp_id)}<br>الجوال: ${display(s.guard_mobile)}<br>تاريخ التعيين: ${display(s.guard_hire_date)}</p>${contactButtons(guardName,s.guard_mobile)}</article>
+      <article class="person-profile coordinator-profile"><span class="profile-icon">👥</span><small>المنسق / المشرف</small><h2>${display(coordName)}</h2><p>الرقم الوظيفي: ${display(s.coordinator_emp_id)}<br>الجوال: ${display(s.coordinator_mobile)}<br>تاريخ التعيين: ${display(s.coordinator_hire_date)}</p>${contactButtons(coordName,s.coordinator_mobile)}</article>
       <a class="school-google-button" target="_blank" href="${mapsUrl}">📍 فتح في Google Maps</a>
       <button class="copy-location-button" onclick="navigator.clipboard.writeText('${mapsUrl}').then(()=>this.textContent='تم نسخ رابط الموقع ✓')">🔗 نسخ رابط الموقع</button>
       <div class="school-link-status">

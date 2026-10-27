@@ -4631,6 +4631,7 @@ def payroll_export_excel(request:Request,month:str=""):
                    "إجمالي أيام الموظف","الغياب","الراتب المستحق","الإضافي",
                    "خصم الغياب","خصومات أخرى","إضافة يدوية","خصم يدوي","الصافي بعد التعديل","ملاحظات"])
         rows=[]
+        supervisor_rows=[]
         for p in people:
             segments=[]
             for a in grouped.get(p["id"],[]):
@@ -4645,6 +4646,9 @@ def payroll_export_excel(request:Request,month:str=""):
             days=min(30,sum(item[3] for item in segments))
             base=round(float(p["base_salary"])*days/30,2)
             absence=(int(p["absent_days"] or 0))*(200 if p["role"]=="guard" else 300)
+            if p["role"]=="supervisor":
+                supervisor_rows.append((p["employee_name"],p["employee_id"],p["identity_no"],p["hire_date"],days,int(p["absent_days"] or 0),base,float(p["overtime"]),absence,float(p["deductions"])))
+                continue
             for index,(a,first,last,segment_days) in enumerate(segments):
                 rows.append((a["school_name"] or "",a["ministry_id"] or "",p["employee_name"],
                     "بواب" if p["role"]=="guard" else "مشرف",p["employee_id"],p["identity_no"],
@@ -4661,12 +4665,35 @@ def payroll_export_excel(request:Request,month:str=""):
             school=_payroll_normalize(row[0])
             return order_by_ministry.get(ministry,order_by_school.get(school,10**9))
         rows.sort(key=lambda row:(school_sequence(row),str(row[0]),str(row[2]),str(row[7])))
+        existing={(str(x[1]).strip(),_payroll_normalize(x[0])) for x in rows}
+        for o in ordering:
+            key=(str(o["ministry_id"] or "").strip(),_payroll_normalize(o["school_name"]))
+            if key not in existing:
+                rows.append((o["school_name"],o["ministry_id"],"","","","","","","",None,None,None,None,None,None,None,None,None,None,"لا يوجد بواب مسجل"))
+        rows.sort(key=lambda x:(school_sequence(x),str(x[0]),str(x[2])))
         for item in rows:
             ws.append(list(item))
             n=ws.max_row
             if item[12] is not None:
                 ws.cell(n,19,f"=M{n}+N{n}-O{n}-P{n}+Q{n}-R{n}")
         from openpyxl.styles import Font,PatternFill,Alignment
+        from openpyxl.utils import get_column_letter
+        sup=wb.create_sheet("مسير المشرفين")
+        sup.sheet_view.rightToLeft=True
+        sup.append(["اسم المشرف","الرقم الوظيفي","الهوية","تاريخ التعيين","أيام الاستحقاق","الغياب","الراتب المستحق","الإضافي","خصم الغياب","خصومات أخرى","إضافة يدوية","خصم يدوي","الصافي"])
+        for record in supervisor_rows:
+            sup.append(list(record)+[None,None,None])
+            n=sup.max_row
+            sup.cell(n,13,f"=G{n}+H{n}-I{n}-J{n}+K{n}-L{n}")
+        sup.freeze_panes="C2"
+        sup.auto_filter.ref=sup.dimensions
+        for col in range(1,14):
+            sup.column_dimensions[get_column_letter(col)].width=34 if col==1 else 20
+        for cell in sup[1]:
+            cell.fill=PatternFill("solid",fgColor="17365D")
+            cell.font=Font(color="FFFFFF",bold=True)
+        for row in sup.iter_rows(min_row=2):
+            for col in (11,12):row[col-1].fill=PatternFill("solid",fgColor="FFF2CC")
         from openpyxl.utils import get_column_letter
         for c in ws[1]:
             c.fill=PatternFill("solid",fgColor="17365D")
@@ -4692,7 +4719,7 @@ def payroll_export_excel(request:Request,month:str=""):
             ["خصم غياب البواب","200 ريال / يوم"],
             ["خصم غياب المشرف","300 ريال / يوم"],
             ["الأعمدة الصفراء","Q إضافة يدوية، R خصم يدوي"],
-            ["هام","إذا تنقل الموظف بين مدارس، المبلغ المالي يظهر مرة واحدة فقط؛ الصفوف الأخرى توزيع أيام"],
+            ["هام","ترتيب مدارس أكتوبر للبوابين فقط؛ المشرفون في شيت منفصل دون مدارس"],
             ["تنبيه","التعديل على ملف Excel لا يحدث بيانات البرنامج تلقائيًا"],
             ["إجمالي الصافي بعد التعديل","='مسير "+month+"'!S2" if len(rows)==1 else "=SUM('مسير "+month+"'!S2:S"+str(max(2,ws.max_row))+")"]
         ]:summary.append(line)

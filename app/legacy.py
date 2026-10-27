@@ -1715,7 +1715,7 @@ def map_schools_api(request: Request):
             coordinator_name,coordinator_emp_id,coordinator_mobile,
             guard_hire_date,coordinator_hire_date,
             latitude,longitude,district,stage,classrooms_count,capacity,
-            education_admin,education_office,establishment_date,school_status,
+            education_admin,education_office,building_ownership,unit_classification,establishment_date,school_status,
             school_notes,has_parking,has_playground,has_sports_hall,
             main_image_url,gallery_images,
             (SELECT a.status FROM attendance a WHERE a.ministry_id=schools.ministry_id
@@ -1752,6 +1752,8 @@ def map_schools_api(request: Request):
           "capacity":r["capacity"] or "",
           "education_admin":r["education_admin"] or "",
           "education_office":r["education_office"] or "",
+          "building_ownership":r["building_ownership"] or "",
+          "unit_classification":r["unit_classification"] or "",
           "establishment_date":r["establishment_date"] or "",
           "school_status":r["school_status"] or "نشطة",
           "school_notes":r["school_notes"] or "",

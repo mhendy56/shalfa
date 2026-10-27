@@ -4538,6 +4538,110 @@ def _payroll_hire_date(value):
         except ValueError:pass
     return None
 
+@app.get("/payroll/export")
+def payroll_export_excel(request:Request,month:str=""):
+    require_permission(request,"school_import")
+    month=month or (date.today() if date.today().day<=23 else date.today()+timedelta(days=12)).strftime("%Y-%m")
+    if not re.fullmatch(r"20\d{2}-(0[1-9]|1[0-2])",month):
+        raise HTTPException(400,"شهر غير صالح")
+    period_start,period_end=_payroll_period(month)
+    con=db()
+    try:
+        _payroll_schema(con)
+        _payroll_sync(con)
+        con.commit()
+        people=con.execute("""SELECT p.*,
+            COALESCE(SUM(d.overtime_amount),0) overtime,
+            COALESCE(SUM(d.deduction_amount),0) deductions,
+            SUM(CASE WHEN d.attendance_status='غائب' THEN 1 ELSE 0 END) absent_days
+            FROM payroll_people p LEFT JOIN payroll_daily d
+            ON p.id=d.person_id AND d.work_date BETWEEN ? AND ?
+            GROUP BY p.id ORDER BY p.school_name,p.employee_name""",
+            (period_start.isoformat(),period_end.isoformat())).fetchall()
+        assignments=con.execute("""SELECT * FROM payroll_assignments
+            WHERE start_date<=? AND (end_date IS NULL OR end_date>=?)
+            ORDER BY school_name,person_id,start_date""",
+            (period_end.isoformat(),period_start.isoformat())).fetchall()
+        termination={r["person_id"]:r["last_work_date"] for r in con.execute(
+            "SELECT person_id,last_work_date FROM payroll_terminations").fetchall()}
+        grouped={}
+        for a in assignments:grouped.setdefault(a["person_id"],[]).append(a)
+        wb=Workbook()
+        ws=wb.active
+        ws.title="مسير "+month
+        ws.sheet_view.rightToLeft=True
+        ws.append(["المدرسة","الرقم الوزاري","اسم الموظف","الوظيفة","الرقم الوظيفي","الهوية",
+                   "تاريخ التعيين","بداية التسكين","نهاية التسكين","أيام المدرسة",
+                   "إجمالي أيام الموظف","الغياب","الراتب المستحق","الإضافي",
+                   "خصم الغياب","خصومات أخرى","إضافة يدوية","خصم يدوي","الصافي بعد التعديل","ملاحظات"])
+        rows=[]
+        for p in people:
+            segments=[]
+            for a in grouped.get(p["id"],[]):
+                first=max(period_start,date.fromisoformat(a["start_date"]))
+                last=min(period_end,date.fromisoformat(a["end_date"]) if a["end_date"] else period_end)
+                hire=_payroll_hire_date(p["hire_date"])
+                if hire:first=max(first,hire)
+                term=_payroll_hire_date(termination.get(p["id"]))
+                if term:last=min(last,term)
+                if first<=last:segments.append((a,first,last,(last-first).days+1))
+            if not segments:continue
+            days=min(30,sum(item[3] for item in segments))
+            base=round(float(p["base_salary"])*days/30,2)
+            absence=(int(p["absent_days"] or 0))*(200 if p["role"]=="guard" else 300)
+            for index,(a,first,last,segment_days) in enumerate(segments):
+                rows.append((a["school_name"] or "",a["ministry_id"] or "",p["employee_name"],
+                    "بواب" if p["role"]=="guard" else "مشرف",p["employee_id"],p["identity_no"],
+                    p["hire_date"],first.isoformat(),last.isoformat(),segment_days,
+                    days if index==0 else None,int(p["absent_days"] or 0) if index==0 else None,
+                    base if index==0 else None,float(p["overtime"]) if index==0 else None,
+                    absence if index==0 else None,float(p["deductions"]) if index==0 else None,
+                    None,None,None,"" if index==0 else "صف توزيع فقط؛ الراتب في الصف الأول للموظف"))
+        rows.sort(key=lambda x:(str(x[0]),str(x[2]),str(x[7])))
+        for item in rows:
+            ws.append(list(item))
+            n=ws.max_row
+            if item[12] is not None:
+                ws.cell(n,19,f"=M{n}+N{n}-O{n}-P{n}+Q{n}-R{n}")
+        from openpyxl.styles import Font,PatternFill,Alignment
+        from openpyxl.utils import get_column_letter
+        for c in ws[1]:
+            c.fill=PatternFill("solid",fgColor="17365D")
+            c.font=Font(color="FFFFFF",bold=True)
+            c.alignment=Alignment(horizontal="center")
+        widths=[30,17,31,13,19,19,17,17,17,16,18,13,18,16,17,17,17,17,21,43]
+        for i,width in enumerate(widths,1):
+            ws.column_dimensions[get_column_letter(i)].width=width
+        for row in ws.iter_rows(min_row=2):
+            for col in (17,18):
+                row[col-1].fill=PatternFill("solid",fgColor="FFF2CC")
+            for col in (13,14,15,16,17,18,19):
+                row[col-1].number_format='#,##0.00'
+        ws.freeze_panes="D2"
+        ws.auto_filter.ref=ws.dimensions
+        summary=wb.create_sheet("تعليمات")
+        summary.sheet_view.rightToLeft=True
+        for line in [
+            ["مسير الرواتب",month],
+            ["بداية الفترة",period_start.isoformat()],
+            ["نهاية الفترة",period_end.isoformat()],
+            ["طريقة الحساب","الراتب الأساسي ÷ 30 × أيام الخدمة بحد أقصى 30 يوم"],
+            ["خصم غياب البواب","200 ريال / يوم"],
+            ["خصم غياب المشرف","300 ريال / يوم"],
+            ["الأعمدة الصفراء","Q إضافة يدوية، R خصم يدوي"],
+            ["هام","إذا تنقل الموظف بين مدارس، المبلغ المالي يظهر مرة واحدة فقط؛ الصفوف الأخرى توزيع أيام"],
+            ["تنبيه","التعديل على ملف Excel لا يحدث بيانات البرنامج تلقائيًا"],
+            ["إجمالي الصافي بعد التعديل","='مسير "+month+"'!S2" if len(rows)==1 else "=SUM('مسير "+month+"'!S2:S"+str(max(2,ws.max_row))+")"]
+        ]:summary.append(line)
+        summary.column_dimensions["A"].width=33
+        summary.column_dimensions["B"].width=90
+        output=BytesIO()
+        wb.save(output)
+        output.seek(0)
+    finally:con.close()
+    return StreamingResponse(output,media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      headers={"Content-Disposition":'attachment; filename="payroll-'+month+'.xlsx"'})
+
 @app.get("/payroll",response_class=HTMLResponse)
 def payroll_page(request: Request,month: str=""):
     require_permission(request,"school_import")
@@ -4600,7 +4704,7 @@ def payroll_page(request: Request,month: str=""):
         <style>body{{font-family:Tahoma,Arial;background:#f3f6fb;color:#152b4a;margin:20px}}section{{background:white;padding:18px;border-radius:12px;margin:12px 0}}input,select,button{{padding:10px;margin:5px;border:1px solid #bbc7d8;border-radius:6px}}button{{background:#143b72;color:white;cursor:pointer}}table{{border-collapse:collapse;width:100%}}td,th{{padding:9px;border:1px solid #d8e0e9;text-align:right}}th{{background:#143b72;color:white}}.scroll{{overflow:auto}}</style>
         <h1>مسير الرواتب الشهري</h1><p><a href="/">الرئيسية</a> | البواب 3000 ريال، المشرف 4500 ريال | خصم الغياب: 200 للبواب و300 للمشرف</p>
         <section><form method="get"><label>شهر المسير <input type="month" name="month" value="{month}"></label><button>عرض المسير</button></form>
-        <h3>الفترة: {period_start} إلى {period_end}</h3><h2>إجمالي المستحقات: {total:,.2f} ريال</h2>
+        <h3>الفترة: {period_start} إلى {period_end}</h3><p><a href="/payroll/export?month={month}" style="display:inline-block;padding:11px;background:#167347;color:white;border-radius:7px;text-decoration:none">تصدير مسير Excel للتعديل اليدوي</a></p><h2>إجمالي المستحقات: {total:,.2f} ريال</h2>
         <p>الحساب يعتمد على فترات التسكين التاريخية المسجلة، ولا يستنتج تواريخ النقل القديمة تلقائيًا. جميع الموظفين حاضرون افتراضيًا؛ الغياب المسجل {absence_total} يوم. الموظف الجديد يبدأ احتسابه من تاريخ التعيين. أساس تجزئة راتب المنضم خلال الدورة: 30 يومًا.</p></section>
         <section><h2>تسجيل نقل أو إنهاء خدمة</h2><p>صلاحية المدير فقط. تاريخ النقل هو أول يوم في المدرسة الجديدة، وتاريخ الفصل هو آخر يوم عمل مستحق.</p>
         <form method="post" action="/payroll/movement"><label>الموظف <input name="search" required placeholder="الرقم الوظيفي / الهوية / الاسم"></label>

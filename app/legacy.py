@@ -4480,7 +4480,7 @@ def payroll_page(request: Request,month: str=""):
             hire=_payroll_hire_date(p["hire_date"])
             active_start=max(period_start,hire) if hire else period_start
             days=max(0,(period_end-active_start).days+1)
-            base=round(float(p["base_salary"])*days/30,2) if hire and active_start>period_start else float(p["base_salary"])
+            base=round(float(p["base_salary"])*min(days,30)/30,2) if hire and active_start>period_start else float(p["base_salary"])
             absent=int(p["absent_days"] or 0)
             absence_cost=absent*(200 if p["role"]=="guard" else 300)
             return days,base,absence_cost,base+float(p["overtime"])-float(p["deductions"])-absence_cost

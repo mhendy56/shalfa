@@ -4388,6 +4388,107 @@ async def import_school_details(request: Request, file: UploadFile=File(...)):
     finally:con.close()
     return RedirectResponse(f"/school-import?details_updated={changed}&details_matched={matched}",status_code=303)
 
+
+# Monthly payroll: manual daily overtime and deductions, preserving historical months.
+def _payroll_schema(con):
+    con.executescript("""
+    CREATE TABLE IF NOT EXISTS payroll_people (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      role TEXT NOT NULL,
+      employee_id TEXT NOT NULL,
+      employee_name TEXT NOT NULL,
+      base_salary REAL NOT NULL,
+      UNIQUE(role,employee_id)
+    );
+    CREATE TABLE IF NOT EXISTS payroll_daily (
+      person_id INTEGER NOT NULL,
+      work_date TEXT NOT NULL,
+      attendance_status TEXT NOT NULL DEFAULT '',
+      overtime_amount REAL NOT NULL DEFAULT 0,
+      deduction_amount REAL NOT NULL DEFAULT 0,
+      notes TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY(person_id,work_date)
+    );
+    """)
+
+def _payroll_sync(con):
+    # Add newly assigned personnel, without changing existing salary overrides.
+    rows=con.execute("""SELECT guard_emp_id,guard_name,coordinator_emp_id,coordinator_name
+                         FROM schools""").fetchall()
+    for r in rows:
+        for role,emp,name,salary in (
+            ("guard",r["guard_emp_id"],r["guard_name"],3000),
+            ("supervisor",r["coordinator_emp_id"],r["coordinator_name"],4500)):
+            if not name or not str(name).strip():continue
+            emp=str(emp or "").strip() or ("NAME:"+str(name).strip())
+            con.execute("""INSERT OR IGNORE INTO payroll_people(role,employee_id,employee_name,base_salary)
+                           VALUES(?,?,?,?)""",(role,emp,str(name).strip(),salary))
+
+@app.get("/payroll",response_class=HTMLResponse)
+def payroll_page(request: Request,month: str=""):
+    require_permission(request,"school_import")
+    import calendar
+    from html import escape
+    month=month or date.today().strftime("%Y-%m")
+    if not re.fullmatch(r"20\\d{2}-(0[1-9]|1[0-2])",month):
+        raise HTTPException(400,"شهر غير صالح")
+    con=db()
+    try:
+        _payroll_schema(con)
+        _payroll_sync(con)
+        con.commit()
+        people=con.execute("""SELECT p.id,p.role,p.employee_id,p.employee_name,p.base_salary,
+          COALESCE(SUM(d.overtime_amount),0) overtime,
+          COALESCE(SUM(d.deduction_amount),0) deductions
+          FROM payroll_people p LEFT JOIN payroll_daily d
+          ON p.id=d.person_id AND substr(d.work_date,1,7)=?
+          GROUP BY p.id ORDER BY p.role,p.employee_name""",(month,)).fetchall()
+        total=sum(float(p["base_salary"])+float(p["overtime"])-float(p["deductions"]) for p in people)
+        opts="".join('<option value="'+str(p["id"])+'">'+escape(p["employee_name"])+' ('+("بواب" if p["role"]=="guard" else "مشرف")+')</option>' for p in people)
+        trs="".join("<tr><td>"+escape(p["employee_name"])+"</td><td>"+("بواب" if p["role"]=="guard" else "مشرف")+"</td><td>"+escape(str(p["employee_id"]))+"</td><td>"+f'{p["base_salary"]:,.2f}'+"</td><td>"+f'{p["overtime"]:,.2f}'+"</td><td>"+f'{p["deductions"]:,.2f}'+"</td><td>"+f'{p["base_salary"]+p["overtime"]-p["deductions"]:,.2f}'+"</td></tr>" for p in people)
+        return HTMLResponse("""<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>مسير الرواتب</title>
+        <style>body{font-family:Tahoma,Arial;background:#f3f6fb;color:#152b4a;margin:20px}section{background:white;padding:18px;border-radius:12px;margin:12px 0}input,select,button{padding:10px;margin:5px;border:1px solid #bbc7d8;border-radius:6px}button{background:#143b72;color:white;cursor:pointer}table{border-collapse:collapse;width:100%}td,th{padding:9px;border:1px solid #d8e0e9;text-align:right}th{background:#143b72;color:white}.scroll{overflow:auto}</style>
+        <h1>مسير الرواتب الشهري</h1><p><a href="/">الرئيسية</a> | الرواتب الأساسية: البواب 3000 ريال، المشرف 4500 ريال</p>
+        <section><form method="get"><label>الشهر <input type="month" name="month" value="{month}"></label><button>عرض المسير</button></form>
+        <h2>إجمالي مستحقات الشهر: {total:,.2f} ريال</h2><p>يشمل الراتب الأساسي والإضافي والخصومات المسجلة، ولا يشمل الاستقطاعات النظامية أو البدلات غير المدخلة.</p></section>
+        <section><h2>تسجيل يومي</h2><form method="post" action="/payroll/daily">
+        <label>الموظف <select name="person_id" required>{opts}</select></label>
+        <label>اليوم <input type="date" name="work_date" value="{today}" min="{month}-01" max="{month}-{last}" required></label>
+        <label>الحالة <select name="attendance_status"><option value="">غير محدد</option><option>حاضر</option><option>غائب</option><option>إجازة</option><option>راحة</option></select></label>
+        <label>الإضافي (ريال) <input name="overtime_amount" type="number" min="0" step="0.01" value="0" required></label>
+        <label>الخصم (ريال) <input name="deduction_amount" type="number" min="0" step="0.01" value="0" required></label>
+        <label>ملاحظات <input name="notes" maxlength="500"></label><button>حفظ اليوم</button></form>
+        <p>تسجيل نفس الموظف في نفس اليوم مرة أخرى يستبدل تسجيل ذلك اليوم، ولا يكرر الإضافي.</p></section>
+        <section class="scroll"><h2>كشف الشهر</h2><table><thead><tr><th>الاسم</th><th>الوظيفة</th><th>الرقم الوظيفي</th><th>الأساسي</th><th>الإضافي</th><th>الخصومات</th><th>الإجمالي</th></tr></thead><tbody>{trs}</tbody></table></section>
+        </html>""".format(month=month,total=total,opts=opts,trs=trs,today=(date.today().isoformat() if date.today().strftime("%Y-%m")==month else month+"-01"),last=calendar.monthrange(int(month[:4]),int(month[5:]))[1]))
+    finally:con.close()
+
+@app.post("/payroll/daily")
+def payroll_daily_save(request:Request,person_id:int=Form(...),work_date:str=Form(...),
+                       attendance_status:str=Form(""),overtime_amount:float=Form(0),
+                       deduction_amount:float=Form(0),notes:str=Form("")):
+    require_permission(request,"school_import")
+    try:day=date.fromisoformat(work_date)
+    except ValueError:raise HTTPException(400,"تاريخ غير صالح")
+    if day.year<2020 or day.year>2100 or attendance_status not in ("","حاضر","غائب","إجازة","راحة"):
+        raise HTTPException(400,"بيانات غير صالحة")
+    import math
+    if not all(math.isfinite(x) and 0<=x<=1000000 for x in (overtime_amount,deduction_amount)):
+        raise HTTPException(400,"المبلغ غير صالح")
+    con=db()
+    try:
+        _payroll_schema(con)
+        if not con.execute("SELECT 1 FROM payroll_people WHERE id=?",(person_id,)).fetchone():
+            raise HTTPException(404,"الموظف غير موجود")
+        con.execute("""INSERT INTO payroll_daily(person_id,work_date,attendance_status,overtime_amount,deduction_amount,notes)
+          VALUES(?,?,?,?,?,?) ON CONFLICT(person_id,work_date) DO UPDATE SET
+          attendance_status=excluded.attendance_status,overtime_amount=excluded.overtime_amount,
+          deduction_amount=excluded.deduction_amount,notes=excluded.notes""",
+          (person_id,work_date,attendance_status,overtime_amount,deduction_amount,notes[:500]))
+        con.commit()
+    finally:con.close()
+    return RedirectResponse("/payroll?month="+work_date[:7],status_code=303)
+
 @app.get("/school-import", response_class=HTMLResponse)
 def school_import_page(request: Request):
     user=require_permission(request,"school_import")

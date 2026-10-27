@@ -4273,15 +4273,23 @@ async def school_import_execute(request: Request, file: UploadFile=File(...), re
     user=current_user(request)
     if not user or user["role"] not in ("admin","manager","supervisor"): raise HTTPException(403)
     if replace_master!="yes" or confirmation.strip()!="استبدال البيانات": raise HTTPException(400,detail="يلزم تفعيل الاستبدال وكتابة: استبدال البيانات")
-    content=await file.read();wb=load_workbook(BytesIO(content),data_only=True)
+    # Stream workbook from the spooled upload file to reduce memory usage.
+    try:
+        await file.seek(0)
+        wb=load_workbook(file.file,data_only=True,read_only=True)
+    except Exception as exc:
+        raise HTTPException(400,detail=f"تعذر قراءة ملف Excel: {exc}")
     rows=[]
-    for ws in wb.worksheets:
-        headers=[str(c.value or "").strip() for c in ws[1]]
+    try:
+      for ws in wb.worksheets:
+        headers=[str(c or "").strip() for c in next(ws.iter_rows(min_row=1,max_row=1,values_only=True),())]
         if not any(h in headers for h in ("الرقم الوزاري","رقم وزاري","ministry_id")): continue
         for values in ws.iter_rows(min_row=2,values_only=True):
             row=dict(zip(headers,values));mid=_pick(row,"الرقم الوزاري","رقم وزاري","ministry_id")
             if mid and mid not in DUPLICATE_SCHOOL_IDS:
                 rows.append(row)
+    finally:
+      wb.close()
     if not rows: raise HTTPException(400,detail="لم يتم العثور على بيانات مدارس")
     con=db();now=datetime.utcnow().isoformat()
     # Preserve operational history; replace master assignments and personnel only.

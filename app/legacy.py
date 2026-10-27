@@ -4283,7 +4283,7 @@ async def import_employee_hire_dates(request: Request, files: list[UploadFile]=F
         raw=await upload.read(12*1024*1024+1)
         if len(raw)>12*1024*1024:raise HTTPException(400,detail='حجم الملف أكبر من الحد المسموح')
         try:
-            decoded=raw.decode('utf-16') if raw.startswith((b'\\xff\\xfe',b'\\xfe\\xff')) else raw.decode('utf-8-sig')
+            decoded=raw.decode('utf-16') if raw.startswith((bytes([255,254]),bytes([254,255]))) else raw.decode('utf-8-sig')
             parser=_EmployeeTableParser();parser.feed(decoded)
             if not parser.rows:raise ValueError('لا يوجد جدول')
             headers=parser.rows[0]

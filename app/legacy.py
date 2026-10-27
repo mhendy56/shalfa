@@ -4318,6 +4318,74 @@ async def import_employee_hire_dates(request: Request, files: list[UploadFile]=F
     finally:con.close()
     return RedirectResponse(f'/school-import?hire_guards={updated_guard}&hire_supervisors={updated_supervisor}',status_code=303)
 
+
+@app.post("/school-import/school-details")
+async def import_school_details(request: Request, file: UploadFile=File(...)):
+    user=require_permission(request,"school_import")
+    if user["role"] not in ("admin","manager","supervisor"):raise HTTPException(403)
+    try:
+        await file.seek(0)
+        wb=load_workbook(file.file,read_only=True,data_only=True)
+    except Exception as exc:
+        raise HTTPException(400,detail=f"تعذر فتح ملف المدارس: {exc}")
+    updates={}
+    try:
+        if "Data" not in wb.sheetnames:raise HTTPException(400,detail="ملف Master Data يجب أن يحتوي على صفحة Data")
+        ws=wb["Data"]
+        it=ws.iter_rows(values_only=True)
+        headers=[str(v or "").strip() for v in next(it,())]
+        def ix(name):
+            return headers.index(name) if name in headers else None
+        fields={"size":"حجم المبني","gender":"النوع","stage":"المرحلة","classrooms_count":"عدد الفصول",
+                "district":"الحي","education_office":"مكتب التعليم","building_ownership":"ملكية المبنى",
+                "unit_classification":"تصنيف الوحدة"}
+        idcols=[ix(x) for x in ("الرقم الوزاري 1","الرقم الوزاري 2","الرقم الوزاري 3")]
+        for values in it:
+            record={}
+            for field,header in fields.items():
+                j=ix(header)
+                if j is None or j>=len(values):continue
+                v=values[j]
+                if v is None or str(v).strip() in ("","#NAME?"):continue
+                value=str(v).strip()
+                if field=="size":
+                    value={"صغير":"صغيرة","متوسط":"متوسطة","كبير":"كبيرة"}.get(value,"")
+                    if not value:continue
+                record[field]=value
+            if not record:continue
+            for j in idcols:
+                if j is None or j>=len(values):continue
+                mid=_norm_excel_value(values[j])
+                if not mid:continue
+                if mid in updates:
+                    # Conflicting records must be reviewed rather than silently overwritten.
+                    for k,v in record.items():
+                        if k in updates[mid] and updates[mid][k]!=v:
+                            updates[mid].pop(k,None)
+                        elif k not in updates[mid]:updates[mid][k]=v
+                else:updates[mid]=record.copy()
+    finally:wb.close()
+    if not updates:raise HTTPException(400,detail="لم يتم العثور على بيانات صالحة")
+    con=db();matched=0;changed=0
+    try:
+        cols={r["name"] for r in con.execute("PRAGMA table_info(schools)")}
+        for col in ("building_ownership","unit_classification"):
+            if col not in cols:con.execute(f"ALTER TABLE schools ADD COLUMN {col} TEXT")
+        for mid,record in updates.items():
+            if not record:continue
+            if not con.execute("SELECT 1 FROM schools WHERE ministry_id=?",(mid,)).fetchone():continue
+            matched+=1
+            columns=list(record)
+            con.execute("UPDATE schools SET "+",".join(f"{k}=?" for k in columns)+" WHERE ministry_id=?",
+                        [record[k] for k in columns]+[mid])
+            changed+=1
+        if not matched:raise HTTPException(400,detail="لم تتم مطابقة أي مدرسة؛ لم يتم تعديل البيانات")
+        con.commit()
+    except Exception:
+        con.rollback();raise
+    finally:con.close()
+    return RedirectResponse(f"/school-import?details_updated={changed}&details_matched={matched}",status_code=303)
+
 @app.get("/school-import", response_class=HTMLResponse)
 def school_import_page(request: Request):
     user=require_permission(request,"school_import")

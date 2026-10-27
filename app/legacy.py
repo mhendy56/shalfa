@@ -831,6 +831,10 @@ def startup():
     }.items():
         if col not in school_cols:
             con.execute(f"ALTER TABLE schools ADD COLUMN {col} {typ}")
+    # Ensure appointment dates exist even before the next personnel import.
+    for col in ("guard_hire_date","coordinator_hire_date"):
+        if col not in school_cols:
+            con.execute(f"ALTER TABLE schools ADD COLUMN {col} TEXT")
     con.execute("UPDATE schools SET status='تعمل' WHERE status IS NULL OR TRIM(status)=''")
     con.executescript("""
     CREATE TABLE IF NOT EXISTS personnel_master(

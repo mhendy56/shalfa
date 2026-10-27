@@ -4404,12 +4404,10 @@ def _payroll_schema(con):
       hire_date TEXT NOT NULL DEFAULT '',
       UNIQUE(role,employee_id)
     );
-    CREATE TABLE IF NOT EXISTS payroll_export_order (
-      employee_id TEXT NOT NULL DEFAULT '',
-      identity_no TEXT NOT NULL DEFAULT '',
-      employee_name TEXT NOT NULL DEFAULT '',
-      sequence_no INTEGER NOT NULL,
-      PRIMARY KEY(sequence_no)
+    CREATE TABLE IF NOT EXISTS payroll_school_order (
+      sequence_no INTEGER PRIMARY KEY,
+      ministry_id TEXT NOT NULL DEFAULT '',
+      school_name TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS payroll_assignments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -4554,35 +4552,44 @@ async def payroll_import_export_order(request:Request,file:UploadFile=File(...))
     try:
         wb=load_workbook(BytesIO(raw),read_only=True,data_only=True)
         ws=wb["مسير البوابين"] if "مسير البوابين" in wb.sheetnames else wb.active
-        header=[str(c or "").strip() for c in next(ws.iter_rows(min_row=1,max_row=1,values_only=True))]
-        def col(title):
-            try:return header.index(title)
-            except ValueError:return -1
-        employee_col=col("الرقم الوظيفي")
-        identity_col=col("رقم هوية البواب")
-        name_col=col("اسم البواب")
-        sequence_col=col("المسلسل")
-        if employee_col<0 or name_col<0:raise ValueError("أعمدة المسير غير موجودة")
+        def normalize_cell(value):
+            return _payroll_normalize(value).replace(" ","").replace("_","")
+        header=None
+        header_row=1
+        for index,values in enumerate(ws.iter_rows(min_row=1,max_row=30,values_only=True),1):
+            labels=[normalize_cell(v) for v in values]
+            if any("المدرسه" in v or "اسمالمدرسه" in v for v in labels):
+                header=labels
+                header_row=index
+                break
+        if header is None:raise ValueError("لم يتم العثور على عمود المدرسة")
+        def find_col(terms):
+            for index,label in enumerate(header):
+                if any(term in label for term in terms):return index
+            return -1
+        school_col=find_col(("اسمالمدرسه","المدرسه"))
+        ministry_col=find_col(("الرقمالوزاري","رقموزاري"))
+        if school_col<0:raise ValueError("عمود المدرسة غير موجود")
         records=[]
-        for line,row in enumerate(ws.iter_rows(min_row=2,values_only=True),2):
-            name=str(row[name_col] or "").strip()
-            if not name:continue
-            emp=str(row[employee_col] or "").strip()
-            identity=str(row[identity_col] or "").strip() if identity_col>=0 else ""
-            seq=row[sequence_col] if sequence_col>=0 else None
-            try:seq=int(seq)
-            except (TypeError,ValueError):seq=line-1
-            records.append((emp,identity,name,seq))
+        seen=set()
+        for line,row in enumerate(ws.iter_rows(min_row=header_row+1,values_only=True),header_row+1):
+            school=str(row[school_col] or "").strip() if school_col<len(row) else ""
+            ministry=str(row[ministry_col] or "").strip() if ministry_col>=0 and ministry_col<len(row) else ""
+            if ministry.endswith(".0"):ministry=ministry[:-2]
+            key=("id",ministry) if ministry else ("name",normalize_cell(school))
+            if not school and not ministry or key in seen:continue
+            seen.add(key)
+            records.append((len(records)+1,ministry,school))
         wb.close()
     except Exception as exc:
         raise HTTPException(400,"تعذر قراءة تسلسل المسير: "+str(exc)[:120])
     con=db()
     try:
         _payroll_schema(con)
-        con.execute("DELETE FROM payroll_export_order")
-        for index,(emp,identity,name,seq) in enumerate(sorted(records,key=lambda x:x[3]),1):
-            con.execute("""INSERT INTO payroll_export_order(employee_id,identity_no,employee_name,sequence_no)
-              VALUES(?,?,?,?)""",(emp,identity,name,index))
+        con.execute("DELETE FROM payroll_school_order")
+        for seq,ministry,school in records:
+            con.execute("""INSERT INTO payroll_school_order(sequence_no,ministry_id,school_name)
+              VALUES(?,?,?)""",(seq,ministry,school))
         con.commit()
     finally:con.close()
     return RedirectResponse("/payroll?order_imported="+str(len(records)),status_code=303)
@@ -4646,16 +4653,14 @@ def payroll_export_excel(request:Request,month:str=""):
                     base if index==0 else None,float(p["overtime"]) if index==0 else None,
                     absence if index==0 else None,float(p["deductions"]) if index==0 else None,
                     None,None,None,"" if index==0 else "صف توزيع فقط؛ الراتب في الصف الأول للموظف"))
-        ordering=con.execute("SELECT employee_id,identity_no,employee_name,sequence_no FROM payroll_export_order").fetchall()
-        order_by_emp={str(r["employee_id"]).strip():r["sequence_no"] for r in ordering if r["employee_id"]}
-        order_by_id={str(r["identity_no"]).strip():r["sequence_no"] for r in ordering if r["identity_no"]}
-        order_by_name={_payroll_normalize(r["employee_name"]):r["sequence_no"] for r in ordering if r["employee_name"]}
-        def sequence(row):
-            key=str(row[4]).strip()
-            identity=str(row[5]).strip()
-            name=_payroll_normalize(row[2])
-            return order_by_emp.get(key,order_by_id.get(identity,order_by_name.get(name,10**9)))
-        rows.sort(key=lambda row:(sequence(row),str(row[0]),str(row[7])))
+        ordering=con.execute("SELECT ministry_id,school_name,sequence_no FROM payroll_school_order").fetchall()
+        order_by_ministry={str(r["ministry_id"]).strip():r["sequence_no"] for r in ordering if r["ministry_id"]}
+        order_by_school={_payroll_normalize(r["school_name"]):r["sequence_no"] for r in ordering if r["school_name"]}
+        def school_sequence(row):
+            ministry=str(row[1]).strip()
+            school=_payroll_normalize(row[0])
+            return order_by_ministry.get(ministry,order_by_school.get(school,10**9))
+        rows.sort(key=lambda row:(school_sequence(row),str(row[0]),str(row[2]),str(row[7])))
         for item in rows:
             ws.append(list(item))
             n=ws.max_row
@@ -4764,7 +4769,7 @@ def payroll_page(request: Request,month: str=""):
         <section><form method="get"><label>شهر المسير <input type="month" name="month" value="{month}"></label><button>عرض المسير</button></form>
         <h3>الفترة: {period_start} إلى {period_end}</h3><p><a href="/payroll/export?month={month}" style="display:inline-block;padding:11px;background:#167347;color:white;border-radius:7px;text-decoration:none">تصدير مسير Excel للتعديل اليدوي</a></p><h2>إجمالي المستحقات: {total:,.2f} ريال</h2>
         <p>الحساب يعتمد على فترات التسكين التاريخية المسجلة، ولا يستنتج تواريخ النقل القديمة تلقائيًا. جميع الموظفين حاضرون افتراضيًا؛ الغياب المسجل {absence_total} يوم. الموظف الجديد يبدأ احتسابه من تاريخ التعيين. أساس تجزئة راتب المنضم خلال الدورة: 30 يومًا.</p></section>
-        <section><h2>تسلسل المسير الأصلي</h2><p>ارفع ملف المسير الأصلي مرة واحدة لاعتماد نفس ترتيب الموظفين عند التصدير، بالمطابقة بالرقم الوظيفي ثم الهوية ثم الاسم.</p>
+        <section><h2>تسلسل المدارس في المسير الأصلي</h2><p>ارفع ملف المسير الأصلي لاعتماد ترتيب المدارس كما وردت في الملف، بالمطابقة بالرقم الوزاري أولًا ثم اسم المدرسة. يظهر موظفو كل مدرسة تحت بعض.</p>
         <form method="post" action="/payroll/export-order" enctype="multipart/form-data"><input type="file" name="file" accept=".xlsx" required><button>اعتماد تسلسل المسير</button></form></section>
         <section><h2>تسجيل نقل أو إنهاء خدمة</h2><p>صلاحية المدير فقط. تاريخ النقل هو أول يوم في المدرسة الجديدة، وتاريخ الفصل هو آخر يوم عمل مستحق.</p>
         <form method="post" action="/payroll/movement"><label>الموظف <input name="search" required placeholder="الرقم الوظيفي / الهوية / الاسم"></label>

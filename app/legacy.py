@@ -4291,6 +4291,61 @@ async def school_import_execute(request: Request, file: UploadFile=File(...), re
     finally:
       wb.close()
     if not rows: raise HTTPException(400,detail="لم يتم العثور على بيانات مدارس")
+    # October Qassim placement sheet: replace ONLY current personnel/assignments.
+    # Never delete schools or historical attendance, documents or assignment logs.
+    if any("البواب" == str(k).strip() for k in rows[0]) and any("اسم المشرف" == str(k).strip() for k in rows[0]):
+        incoming={}
+        for row in rows:
+            mid=_pick(row,"الرقم الوزاري","رقم وزاري","ministry_id")
+            if mid in incoming:
+                raise HTTPException(400,detail=f"رقم وزاري مكرر في الملف: {mid}")
+            incoming[mid]=row
+        con=db()
+        try:
+            known={r["ministry_id"] for r in con.execute("SELECT ministry_id FROM schools")}
+            matched=known.intersection(incoming)
+            if not matched:
+                raise HTTPException(400,detail="لا توجد أرقام وزارية مطابقة للمدارس الحالية؛ لم يتم تغيير أي بيانات")
+            if len(matched)*2 < len(incoming):
+                raise HTTPException(400,detail=f"نسبة المطابقة منخفضة ({len(matched)} من {len(incoming)})؛ تم إلغاء الاستبدال لحماية البيانات")
+            now=datetime.utcnow().isoformat()
+            # Clear old CURRENT placements, including schools absent from the new file.
+            con.execute("UPDATE schools SET guard_name='',guard_emp_id='',guard_id='',guard_mobile='',coordinator_name='',coordinator_emp_id='',coordinator_mobile=''")
+            con.execute("DELETE FROM personnel_master WHERE role_title IN ('بواب','منسق / مشرف')")
+            con.execute("DELETE FROM guard_master")
+            con.execute("DELETE FROM coordinator_master")
+            guards={};supervisors={}
+            for mid in matched:
+                row=incoming[mid]
+                guard=_pick(row,"البواب");gmobile=_pick(row,"رقم جوال البواب");gid=_pick(row,"رقم هوية البواب")
+                supervisor=_pick(row,"اسم المشرف");smobile=_pick(row,"رقم جوال المشرف");sid=_pick(row,"رقم هوية المشرف")
+                gemp=("G-"+gid) if gid else ("G-"+guard) if guard else ""
+                semp=("S-"+sid) if sid else ("S-"+supervisor) if supervisor else ""
+                con.execute("UPDATE schools SET guard_name=?,guard_emp_id=?,guard_id=?,guard_mobile=?,coordinator_name=?,coordinator_emp_id=?,coordinator_mobile=? WHERE ministry_id=?",
+                    (guard,gemp,gid,gmobile,supervisor,semp,smobile,mid))
+                if guard and gemp:
+                    guards[gemp]=(guard,gid,gmobile,mid)
+                if supervisor and semp:
+                    supervisors[semp]=(supervisor,sid,smobile,mid)
+            for emp,(name,id_no,mobile,mid) in guards.items():
+                con.execute("INSERT INTO guard_master(emp_id,emp_name,id_no,mobile,status,linked_ministry_id) VALUES(?,?,?,?,?,?)",
+                    (emp,name,id_no,mobile,"نشط",mid))
+                con.execute("INSERT INTO personnel_master(emp_id,full_name,id_no,mobile,role_title,linked_ministry_id,is_active,imported_at) VALUES(?,?,?,?,?,?,1,?)",
+                    (emp,name,id_no,mobile,"بواب",mid,now))
+            for emp,(name,id_no,mobile,mid) in supervisors.items():
+                con.execute("INSERT INTO coordinator_master(emp_id,full_name,mobile,is_active,created_at,updated_at) VALUES(?,?,?,1,?,?)",
+                    (emp,name,mobile,now,now))
+                con.execute("INSERT INTO personnel_master(emp_id,full_name,id_no,mobile,role_title,linked_ministry_id,is_active,imported_at) VALUES(?,?,?,?,?,?,1,?)",
+                    (emp,name,id_no,mobile,"منسق / مشرف",mid,now))
+            con.execute("INSERT INTO master_import_log(file_name,imported_at,imported_by,schools_count,guards_count,coordinators_count,administrators_count,archived_schools_count,mode,notes) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (file.filename,now,user["id"],len(matched),len(guards),len(supervisors),0,0,"استبدال تسكين الموظفين",f"Matched {len(matched)}/{len(incoming)} schools"))
+            con.commit()
+        except Exception:
+            con.rollback()
+            raise
+        finally:
+            con.close()
+        return RedirectResponse("/school-import?success=1",303)
     con=db();now=datetime.utcnow().isoformat()
     # Preserve operational history; replace master assignments and personnel only.
     old_ids={r["ministry_id"] for r in con.execute("SELECT ministry_id FROM schools")};new_ids=set()

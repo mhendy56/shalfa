@@ -1713,6 +1713,7 @@ def map_schools_api(request: Request):
           SELECT ministry_id,school_name,city,school_type,operational_type,
             gender,size,guard_name,guard_emp_id,guard_mobile,
             coordinator_name,coordinator_emp_id,coordinator_mobile,
+            guard_hire_date,coordinator_hire_date,
             latitude,longitude,district,stage,classrooms_count,capacity,
             education_admin,education_office,establishment_date,school_status,
             school_notes,has_parking,has_playground,has_sports_hall,

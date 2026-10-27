@@ -4404,6 +4404,13 @@ def _payroll_schema(con):
       hire_date TEXT NOT NULL DEFAULT '',
       UNIQUE(role,employee_id)
     );
+    CREATE TABLE IF NOT EXISTS payroll_export_order (
+      employee_id TEXT NOT NULL DEFAULT '',
+      identity_no TEXT NOT NULL DEFAULT '',
+      employee_name TEXT NOT NULL DEFAULT '',
+      sequence_no INTEGER NOT NULL,
+      PRIMARY KEY(sequence_no)
+    );
     CREATE TABLE IF NOT EXISTS payroll_assignments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       person_id INTEGER NOT NULL,
@@ -4538,6 +4545,48 @@ def _payroll_hire_date(value):
         except ValueError:pass
     return None
 
+@app.post("/payroll/export-order")
+async def payroll_import_export_order(request:Request,file:UploadFile=File(...)):
+    user=require_permission(request,"school_import")
+    if user["role"] not in ("admin","manager"):raise HTTPException(403)
+    raw=await file.read()
+    if len(raw)>15*1024*1024:raise HTTPException(413,"الملف كبير")
+    try:
+        wb=load_workbook(BytesIO(raw),read_only=True,data_only=True)
+        ws=wb["مسير البوابين"] if "مسير البوابين" in wb.sheetnames else wb.active
+        header=[str(c or "").strip() for c in next(ws.iter_rows(min_row=1,max_row=1,values_only=True))]
+        def col(title):
+            try:return header.index(title)
+            except ValueError:return -1
+        employee_col=col("الرقم الوظيفي")
+        identity_col=col("رقم هوية البواب")
+        name_col=col("اسم البواب")
+        sequence_col=col("المسلسل")
+        if employee_col<0 or name_col<0:raise ValueError("أعمدة المسير غير موجودة")
+        records=[]
+        for line,row in enumerate(ws.iter_rows(min_row=2,values_only=True),2):
+            name=str(row[name_col] or "").strip()
+            if not name:continue
+            emp=str(row[employee_col] or "").strip()
+            identity=str(row[identity_col] or "").strip() if identity_col>=0 else ""
+            seq=row[sequence_col] if sequence_col>=0 else None
+            try:seq=int(seq)
+            except (TypeError,ValueError):seq=line-1
+            records.append((emp,identity,name,seq))
+        wb.close()
+    except Exception as exc:
+        raise HTTPException(400,"تعذر قراءة تسلسل المسير: "+str(exc)[:120])
+    con=db()
+    try:
+        _payroll_schema(con)
+        con.execute("DELETE FROM payroll_export_order")
+        for index,(emp,identity,name,seq) in enumerate(sorted(records,key=lambda x:x[3]),1):
+            con.execute("""INSERT INTO payroll_export_order(employee_id,identity_no,employee_name,sequence_no)
+              VALUES(?,?,?,?)""",(emp,identity,name,index))
+        con.commit()
+    finally:con.close()
+    return RedirectResponse("/payroll?order_imported="+str(len(records)),status_code=303)
+
 @app.get("/payroll/export")
 def payroll_export_excel(request:Request,month:str=""):
     require_permission(request,"school_import")
@@ -4597,7 +4646,16 @@ def payroll_export_excel(request:Request,month:str=""):
                     base if index==0 else None,float(p["overtime"]) if index==0 else None,
                     absence if index==0 else None,float(p["deductions"]) if index==0 else None,
                     None,None,None,"" if index==0 else "صف توزيع فقط؛ الراتب في الصف الأول للموظف"))
-        rows.sort(key=lambda x:(str(x[0]),str(x[2]),str(x[7])))
+        ordering=con.execute("SELECT employee_id,identity_no,employee_name,sequence_no FROM payroll_export_order").fetchall()
+        order_by_emp={str(r["employee_id"]).strip():r["sequence_no"] for r in ordering if r["employee_id"]}
+        order_by_id={str(r["identity_no"]).strip():r["sequence_no"] for r in ordering if r["identity_no"]}
+        order_by_name={_payroll_normalize(r["employee_name"]):r["sequence_no"] for r in ordering if r["employee_name"]}
+        def sequence(row):
+            key=str(row[4]).strip()
+            identity=str(row[5]).strip()
+            name=_payroll_normalize(row[2])
+            return order_by_emp.get(key,order_by_id.get(identity,order_by_name.get(name,10**9)))
+        rows.sort(key=lambda row:(sequence(row),str(row[0]),str(row[7])))
         for item in rows:
             ws.append(list(item))
             n=ws.max_row
@@ -4706,6 +4764,8 @@ def payroll_page(request: Request,month: str=""):
         <section><form method="get"><label>شهر المسير <input type="month" name="month" value="{month}"></label><button>عرض المسير</button></form>
         <h3>الفترة: {period_start} إلى {period_end}</h3><p><a href="/payroll/export?month={month}" style="display:inline-block;padding:11px;background:#167347;color:white;border-radius:7px;text-decoration:none">تصدير مسير Excel للتعديل اليدوي</a></p><h2>إجمالي المستحقات: {total:,.2f} ريال</h2>
         <p>الحساب يعتمد على فترات التسكين التاريخية المسجلة، ولا يستنتج تواريخ النقل القديمة تلقائيًا. جميع الموظفين حاضرون افتراضيًا؛ الغياب المسجل {absence_total} يوم. الموظف الجديد يبدأ احتسابه من تاريخ التعيين. أساس تجزئة راتب المنضم خلال الدورة: 30 يومًا.</p></section>
+        <section><h2>تسلسل المسير الأصلي</h2><p>ارفع ملف المسير الأصلي مرة واحدة لاعتماد نفس ترتيب الموظفين عند التصدير، بالمطابقة بالرقم الوظيفي ثم الهوية ثم الاسم.</p>
+        <form method="post" action="/payroll/export-order" enctype="multipart/form-data"><input type="file" name="file" accept=".xlsx" required><button>اعتماد تسلسل المسير</button></form></section>
         <section><h2>تسجيل نقل أو إنهاء خدمة</h2><p>صلاحية المدير فقط. تاريخ النقل هو أول يوم في المدرسة الجديدة، وتاريخ الفصل هو آخر يوم عمل مستحق.</p>
         <form method="post" action="/payroll/movement"><label>الموظف <input name="search" required placeholder="الرقم الوظيفي / الهوية / الاسم"></label>
         <label>الحركة <select name="action"><option value="transfer">نقل</option><option value="termination">إنهاء خدمة</option></select></label>

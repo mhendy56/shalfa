@@ -4448,15 +4448,15 @@ def payroll_page(request: Request,month: str=""):
           FROM payroll_people p LEFT JOIN payroll_daily d
           ON p.id=d.person_id AND substr(d.work_date,1,7)=?
           GROUP BY p.id ORDER BY p.role,p.employee_name""",(month,)).fetchall()
-        total=sum(float(p["base_salary"])+float(p["overtime"])-float(p["deductions"]) for p in people)
+        total=sum(float(p["base_salary"])+float(p["overtime"])-float(p["deductions"])-int(p["absent_days"] or 0)*(200 if p["role"]=="guard" else 300) for p in people)
         absence_total=sum(int(p["absent_days"] or 0) for p in people)
         opts="".join('<option value="'+str(p["id"])+'">'+escape(p["employee_name"])+' ('+("بواب" if p["role"]=="guard" else "مشرف")+')</option>' for p in people)
-        trs="".join("<tr><td>"+escape(p["employee_name"])+"</td><td>"+("بواب" if p["role"]=="guard" else "مشرف")+"</td><td>"+escape(str(p["employee_id"]))+"</td><td>"+str(p["absent_days"] or 0)+"</td><td>"+f'{p["base_salary"]:,.2f}'+"</td><td>"+f'{p["overtime"]:,.2f}'+"</td><td>"+f'{p["deductions"]:,.2f}'+"</td><td>"+f'{p["base_salary"]+p["overtime"]-p["deductions"]:,.2f}'+"</td></tr>" for p in people)
+        trs="".join("<tr><td>"+escape(p["employee_name"])+"</td><td>"+("بواب" if p["role"]=="guard" else "مشرف")+"</td><td>"+escape(str(p["employee_id"]))+"</td><td>"+str(p["absent_days"] or 0)+"</td><td>"+f'{p["base_salary"]:,.2f}'+"</td><td>"+f'{p["overtime"]:,.2f}'+"</td><td>"+f'{(p["absent_days"] or 0)*(200 if p["role"]=="guard" else 300):,.2f}'+"</td><td>"+f'{p["deductions"]:,.2f}'+"</td><td>"+f'{p["base_salary"]+p["overtime"]-p["deductions"]-(p["absent_days"] or 0)*(200 if p["role"]=="guard" else 300):,.2f}'+"</td></tr>" for p in people)
         return HTMLResponse("""<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>مسير الرواتب</title>
         <style>body{{font-family:Tahoma,Arial;background:#f3f6fb;color:#152b4a;margin:20px}}section{{background:white;padding:18px;border-radius:12px;margin:12px 0}}input,select,button{{padding:10px;margin:5px;border:1px solid #bbc7d8;border-radius:6px}}button{{background:#143b72;color:white;cursor:pointer}}table{{border-collapse:collapse;width:100%}}td,th{{padding:9px;border:1px solid #d8e0e9;text-align:right}}th{{background:#143b72;color:white}}.scroll{{overflow:auto}}</style>
-        <h1>مسير الرواتب الشهري</h1><p><a href="/">الرئيسية</a> | الرواتب الأساسية: البواب 3000 ريال، المشرف 4500 ريال</p>
+        <h1>مسير الرواتب الشهري</h1><p><a href="/">الرئيسية</a> | الرواتب الأساسية: البواب 3000 ريال، المشرف 4500 ريال | خصم يوم الغياب: البواب 200 ريال، المشرف 300 ريال</p>
         <section><form method="get"><label>الشهر <input type="month" name="month" value="{month}"></label><button>عرض المسير</button></form>
-        <h2>إجمالي مستحقات الشهر: {total:,.2f} ريال</h2><p>الأصل: جميع الموظفين حاضرون ما لم يتم تسجيل غياب أو إجازة أو راحة. أيام الغياب المسجلة: {absence_total}.</p><p>يشمل الراتب الأساسي والإضافي والخصومات المسجلة، ولا يشمل الاستقطاعات النظامية أو البدلات غير المدخلة.</p></section>
+        <h2>إجمالي مستحقات الشهر: {total:,.2f} ريال</h2><p>الأصل: جميع الموظفين حاضرون ما لم يتم تسجيل غياب أو إجازة أو راحة. أيام الغياب المسجلة: {absence_total}. خصم الغياب يحتسب تلقائيًا مرة واحدة عن كل يوم غياب مسجل.</p><p>يشمل الراتب الأساسي والإضافي وخصم الغياب الآلي والخصومات الأخرى، ولا يشمل الاستقطاعات النظامية أو البدلات غير المدخلة.</p></section>
         <section><h2>تسجيل غياب بالرقم الوظيفي أو الاسم أو الهوية</h2><form method="post" action="/payroll/absence"><label>بحث الموظف <input name="search" required placeholder="الرقم الوظيفي / الهوية / الاسم" style="min-width:270px"></label><label>اليوم <input type="date" name="work_date" value="{today}" min="{month}-01" max="{month}-{last}" required></label><label>ملاحظة <input name="notes" maxlength="500"></label><button>تسجيل غياب</button></form><p>لو الاسم متكرر، سيُطلب استخدام الرقم الوظيفي أو الهوية لتجنب تسجيل غياب لشخص آخر. <a href="/payroll?month={month}">العودة للمسير</a></p></section><section><h2>تسجيل إضافي أو خصم / تعديل حالة يوم</h2><form method="post" action="/payroll/daily">
         <label>الموظف <select name="person_id" required>{opts}</select></label>
         <label>اليوم <input type="date" name="work_date" value="{today}" min="{month}-01" max="{month}-{last}" required></label>
@@ -4465,7 +4465,7 @@ def payroll_page(request: Request,month: str=""):
         <label>الخصم (ريال) <input name="deduction_amount" type="number" min="0" step="0.01" value="0" required></label>
         <label>ملاحظات <input name="notes" maxlength="500"></label><button>حفظ اليوم</button></form>
         <p>تسجيل نفس الموظف في نفس اليوم مرة أخرى يستبدل تسجيل ذلك اليوم، ولا يكرر الإضافي.</p></section>
-        <section class="scroll"><h2>كشف الشهر</h2><table><thead><tr><th>الاسم</th><th>الوظيفة</th><th>الرقم الوظيفي</th><th>أيام الغياب</th><th>الأساسي</th><th>الإضافي</th><th>الخصومات</th><th>الإجمالي</th></tr></thead><tbody>{trs}</tbody></table></section>
+        <section class="scroll"><h2>كشف الشهر</h2><table><thead><tr><th>الاسم</th><th>الوظيفة</th><th>الرقم الوظيفي</th><th>أيام الغياب</th><th>الأساسي</th><th>الإضافي</th><th>خصم الغياب الآلي</th><th>خصومات أخرى</th><th>الإجمالي</th></tr></thead><tbody>{trs}</tbody></table></section>
         </html>""".format(month=month,total=total,absence_total=absence_total,opts=opts,trs=trs,today=(date.today().isoformat() if date.today().strftime("%Y-%m")==month else month+"-01"),last=calendar.monthrange(int(month[:4]),int(month[5:]))[1]))
     finally:con.close()
 

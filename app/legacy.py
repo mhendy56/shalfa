@@ -4554,32 +4554,20 @@ async def payroll_import_export_order(request:Request,file:UploadFile=File(...))
         ws=wb["مسير البوابين"] if "مسير البوابين" in wb.sheetnames else wb.active
         def normalize_cell(value):
             return _payroll_normalize(value).replace(" ","").replace("_","")
-        header=None
-        header_row=1
-        for index,values in enumerate(ws.iter_rows(min_row=1,max_row=30,values_only=True),1):
-            labels=[normalize_cell(v) for v in values]
-            if any("المدرسه" in v or "اسمالمدرسه" in v for v in labels):
-                header=labels
-                header_row=index
-                break
-        if header is None:raise ValueError("لم يتم العثور على عمود المدرسة")
-        def find_col(terms):
-            for index,label in enumerate(header):
-                if any(term in label for term in terms):return index
-            return -1
-        school_col=find_col(("اسمالمدرسه","المدرسه"))
-        ministry_col=find_col(("الرقمالوزاري","رقموزاري"))
-        if school_col<0:raise ValueError("عمود المدرسة غير موجود")
+        # October reference layout: B=sequence, C=school, D=ministry IDs.
+        # C/D headers are blank in the supplied workbook; rely on its fixed layout.
         records=[]
         seen=set()
-        for line,row in enumerate(ws.iter_rows(min_row=header_row+1,values_only=True),header_row+1):
-            school=str(row[school_col] or "").strip() if school_col<len(row) else ""
-            ministry=str(row[ministry_col] or "").strip() if ministry_col>=0 and ministry_col<len(row) else ""
+        for line,row in enumerate(ws.iter_rows(min_row=2,values_only=True),2):
+            school=str(row[2] or "").strip() if len(row)>2 else ""
+            ministry=str(row[3] or "").strip() if len(row)>3 else ""
+            if not school:continue
             if ministry.endswith(".0"):ministry=ministry[:-2]
-            key=("id",ministry) if ministry else ("name",normalize_cell(school))
-            if not school and not ministry or key in seen:continue
+            key=("id",ministry) if ministry else ("name",_payroll_normalize(school))
+            if key in seen:continue
             seen.add(key)
             records.append((len(records)+1,ministry,school))
+        if not records:raise ValueError("لم يتم العثور على مدارس في العمود C")
         wb.close()
     except Exception as exc:
         raise HTTPException(400,"تعذر قراءة تسلسل المسير: "+str(exc)[:120])
@@ -4796,7 +4784,7 @@ def payroll_page(request: Request,month: str=""):
         <section><form method="get"><label>شهر المسير <input type="month" name="month" value="{month}"></label><button>عرض المسير</button></form>
         <h3>الفترة: {period_start} إلى {period_end}</h3><p><a href="/payroll/export?month={month}" style="display:inline-block;padding:11px;background:#167347;color:white;border-radius:7px;text-decoration:none">تصدير مسير Excel للتعديل اليدوي</a></p><h2>إجمالي المستحقات: {total:,.2f} ريال</h2>
         <p>الحساب يعتمد على فترات التسكين التاريخية المسجلة، ولا يستنتج تواريخ النقل القديمة تلقائيًا. جميع الموظفين حاضرون افتراضيًا؛ الغياب المسجل {absence_total} يوم. الموظف الجديد يبدأ احتسابه من تاريخ التعيين. أساس تجزئة راتب المنضم خلال الدورة: 30 يومًا.</p></section>
-        <section><h2>تسلسل المدارس في المسير الأصلي</h2><p>ارفع ملف المسير الأصلي لاعتماد ترتيب المدارس كما وردت في الملف، بالمطابقة بالرقم الوزاري أولًا ثم اسم المدرسة. يظهر موظفو كل مدرسة تحت بعض.</p>
+        <section><h2>تسلسل المدارس في المسير الأصلي</h2><p>ارفع مسير أكتوبر مرة واحدة لتثبيت ترتيب المدارس لجميع الشهور القادمة. لا يتغير الترتيب عند اختيار شهر مختلف، ولا يُستبدل إلا برفع مرجع جديد عمدًا.</p>
         <form method="post" action="/payroll/export-order" enctype="multipart/form-data"><input type="file" name="file" accept=".xlsx" required><button>اعتماد تسلسل المسير</button></form></section>
         <section><h2>تسجيل نقل أو إنهاء خدمة</h2><p>صلاحية المدير فقط. تاريخ النقل هو أول يوم في المدرسة الجديدة، وتاريخ الفصل هو آخر يوم عمل مستحق.</p>
         <form method="post" action="/payroll/movement"><label>الموظف <input name="search" required placeholder="الرقم الوظيفي / الهوية / الاسم"></label>

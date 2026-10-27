@@ -4254,6 +4254,70 @@ def _normalize_operational_type(value, fallback=""):
         return text
     return "غير محدد"
 
+
+# Employee payroll exports are HTML tables encoded as UTF-16 despite .xls extension.
+from html.parser import HTMLParser
+class _EmployeeTableParser(HTMLParser):
+    def __init__(self):
+        super().__init__();self.rows=[];self.row=None;self.cell=None
+    def handle_starttag(self,tag,attrs):
+        if tag.lower()=='tr':self.row=[]
+        elif tag.lower() in ('td','th') and self.row is not None:self.cell=[]
+    def handle_data(self,data):
+        if self.cell is not None:self.cell.append(data)
+    def handle_endtag(self,tag):
+        if tag.lower() in ('td','th') and self.cell is not None and self.row is not None:
+            self.row.append(''.join(self.cell).strip());self.cell=None
+        elif tag.lower()=='tr' and self.row is not None:
+            self.rows.append(self.row);self.row=None
+
+@app.post('/school-import/hire-dates')
+async def import_employee_hire_dates(request: Request, files: list[UploadFile]=File(...)):
+    user=require_permission(request,'school_import')
+    if user['role'] not in ('admin','manager','supervisor'):raise HTTPException(403)
+    if not files or len(files)>5:raise HTTPException(400,detail='اختر من ملف إلى خمسة ملفات')
+    by_emp={};by_id={};ambiguous_emp=set();ambiguous_id=set()
+    for upload in files:
+        if not (upload.filename or '').lower().endswith('.xls'):
+            raise HTTPException(400,detail='هذه الشاشة تستقبل ملفات Employee بصيغة xls فقط')
+        raw=await upload.read(12*1024*1024+1)
+        if len(raw)>12*1024*1024:raise HTTPException(400,detail='حجم الملف أكبر من الحد المسموح')
+        try:
+            decoded=raw.decode('utf-16') if raw.startswith((b'\\xff\\xfe',b'\\xfe\\xff')) else raw.decode('utf-8-sig')
+            parser=_EmployeeTableParser();parser.feed(decoded)
+            if not parser.rows:raise ValueError('لا يوجد جدول')
+            headers=parser.rows[0]
+            columns=[headers.index(k) for k in ('Emp_ID','ID_No','DOAppointment')]
+        except Exception as exc:
+            raise HTTPException(400,detail=f'صيغة ملف الموظفين غير صحيحة: {exc}')
+        for row in parser.rows[1:]:
+            if len(row)<=max(columns):continue
+            emp,identity,hire=(row[i].strip() for i in columns)
+            if not hire:continue
+            for key,value,mapping,conflicts in ((emp,hire,by_emp,ambiguous_emp),(identity,hire,by_id,ambiguous_id)):
+                if not key:continue
+                if key in mapping and mapping[key]!=value:conflicts.add(key)
+                else:mapping[key]=value
+    con=db();updated_guard=updated_supervisor=0
+    try:
+        school_columns={c['name'] for c in con.execute('PRAGMA table_info(schools)')}
+        for col in ('guard_hire_date','coordinator_hire_date'):
+            if col not in school_columns:con.execute(f'ALTER TABLE schools ADD COLUMN {col} TEXT')
+        for r in con.execute('SELECT ministry_id,guard_emp_id,guard_id,coordinator_emp_id FROM schools').fetchall():
+            for field,emp_key,id_key in (('guard_hire_date','guard_emp_id','guard_id'),('coordinator_hire_date','coordinator_emp_id',None)):
+                emp=str(r[emp_key] or '').strip();identity=str(r[id_key] or '').strip() if id_key else ''
+                date_value=by_emp.get(emp,'') if emp and emp not in ambiguous_emp else ''
+                if not date_value and identity and identity not in ambiguous_id:date_value=by_id.get(identity,'')
+                if not date_value:continue
+                con.execute(f'UPDATE schools SET {field}=? WHERE ministry_id=?',(date_value,r['ministry_id']))
+                if field=='guard_hire_date':updated_guard+=1
+                else:updated_supervisor+=1
+        con.commit()
+    except Exception:
+        con.rollback();raise
+    finally:con.close()
+    return RedirectResponse(f'/school-import?hire_guards={updated_guard}&hire_supervisors={updated_supervisor}',status_code=303)
+
 @app.get("/school-import", response_class=HTMLResponse)
 def school_import_page(request: Request):
     user=require_permission(request,"school_import")

@@ -4490,7 +4490,7 @@ def _payroll_apply_movement(con,person,action,effective_date,ministry_id="",reas
       ORDER BY start_date DESC""",(person["id"],)).fetchall()
     if len(open_rows)!=1:raise HTTPException(409,"يجب مراجعة فترات تسكين الموظف قبل تسجيل الحركة")
     old=open_rows[0]
-    if effective<=date.fromisoformat(old["start_date"]):raise HTTPException(409,"تاريخ الحركة يجب أن يكون بعد بداية التسكين الحالي")
+    if effective<date.fromisoformat(old["start_date"]) or (action=="transfer" and effective==date.fromisoformat(old["start_date"])):raise HTTPException(409,"تاريخ الحركة لا يتوافق مع بداية التسكين الحالي")
     if con.execute("SELECT 1 FROM payroll_terminations WHERE person_id=?",(person["id"],)).fetchone():
         raise HTTPException(409,"الموظف منتهي الخدمة بالفعل")
     if action=="transfer":
@@ -4647,6 +4647,9 @@ def payroll_record_absence(request:Request,search:str=Form(...),work_date:str=Fo
         if not matches:raise HTTPException(404,"لم يتم العثور على موظف مطابق؛ راجع الاسم أو الرقم أو الهوية")
         if len(matches)!=1:raise HTTPException(409,"وجدت أكثر من موظف مطابق؛ استخدم رقم الموظف أو الهوية بشكل محدد")
         person=matches[0]
+        if not con.execute("""SELECT 1 FROM payroll_assignments WHERE person_id=? AND start_date<=?
+          AND (end_date IS NULL OR end_date>=?)""",(person["id"],work_date,work_date)).fetchone():
+            raise HTTPException(409,"تاريخ الغياب خارج فترة خدمة الموظف المسجلة")
         previous=con.execute("SELECT overtime_amount,deduction_amount FROM payroll_daily WHERE person_id=? AND work_date=?",(person["id"],work_date)).fetchone()
         con.execute("""INSERT INTO payroll_daily(person_id,work_date,attendance_status,overtime_amount,deduction_amount,notes)
           VALUES(?,?,'غائب',?,?,?) ON CONFLICT(person_id,work_date) DO UPDATE SET
@@ -4654,7 +4657,7 @@ def payroll_record_absence(request:Request,search:str=Form(...),work_date:str=Fo
           (person["id"],work_date,float(previous["overtime_amount"]) if previous else 0,float(previous["deduction_amount"]) if previous else 0,notes[:500]))
         con.commit()
     finally:con.close()
-    return RedirectResponse("/payroll?month="+work_date[:7],status_code=303)
+    return RedirectResponse("/payroll?month="+(date.fromisoformat(work_date) if int(work_date[8:10])<=23 else date.fromisoformat(work_date)+timedelta(days=12)).strftime("%Y-%m"),status_code=303)
 
 @app.post("/payroll/daily")
 def payroll_daily_save(request:Request,person_id:int=Form(...),work_date:str=Form(...),
@@ -4673,6 +4676,9 @@ def payroll_daily_save(request:Request,person_id:int=Form(...),work_date:str=For
         _payroll_schema(con)
         if not con.execute("SELECT 1 FROM payroll_people WHERE id=?",(person_id,)).fetchone():
             raise HTTPException(404,"الموظف غير موجود")
+        if not con.execute("""SELECT 1 FROM payroll_assignments WHERE person_id=? AND start_date<=?
+          AND (end_date IS NULL OR end_date>=?)""",(person_id,work_date,work_date)).fetchone():
+            raise HTTPException(409,"التاريخ خارج فترة خدمة الموظف المسجلة")
         con.execute("""INSERT INTO payroll_daily(person_id,work_date,attendance_status,overtime_amount,deduction_amount,notes)
           VALUES(?,?,?,?,?,?) ON CONFLICT(person_id,work_date) DO UPDATE SET
           attendance_status=excluded.attendance_status,overtime_amount=excluded.overtime_amount,

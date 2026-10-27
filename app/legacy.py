@@ -4404,6 +4404,24 @@ def _payroll_schema(con):
       hire_date TEXT NOT NULL DEFAULT '',
       UNIQUE(role,employee_id)
     );
+    CREATE TABLE IF NOT EXISTS payroll_assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      person_id INTEGER NOT NULL,
+      ministry_id TEXT NOT NULL,
+      school_name TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT,
+      event_type TEXT NOT NULL DEFAULT 'initial',
+      created_at TEXT NOT NULL,
+      UNIQUE(person_id,ministry_id,start_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_payroll_assignments_person ON payroll_assignments(person_id,start_date);
+    CREATE TABLE IF NOT EXISTS payroll_terminations (
+      person_id INTEGER PRIMARY KEY,
+      last_work_date TEXT NOT NULL,
+      reason TEXT NOT NULL DEFAULT '',
+      recorded_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS payroll_daily (
       person_id INTEGER NOT NULL,
       work_date TEXT NOT NULL,
@@ -4420,6 +4438,7 @@ def _payroll_schema(con):
         if column not in cols:con.execute(f"ALTER TABLE payroll_people ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
 
 def _payroll_sync(con):
+    # School master is only a CURRENT snapshot; never fabricate past transfer dates.
     rows=con.execute("""SELECT ministry_id,school_name,guard_emp_id,guard_name,guard_id,
       guard_hire_date,coordinator_emp_id,coordinator_name,coordinator_hire_date FROM schools""").fetchall()
     for r in rows:
@@ -4440,6 +4459,70 @@ def _payroll_sync(con):
               WHERE role=? AND employee_id=?""",
               (str(identity or ""),str(hire or ""),str(r["ministry_id"] or ""),
                str(r["school_name"] or ""),role,emp))
+            p=con.execute("SELECT id,hire_date FROM payroll_people WHERE role=? AND employee_id=?",(role,emp)).fetchone()
+            # Seed only once. A known hire date is a factual lower bound; otherwise
+            # use today's date and require manual backdating for historical cycles.
+            if not con.execute("SELECT 1 FROM payroll_assignments WHERE person_id=?",(p["id"],)).fetchone() and not con.execute("SELECT 1 FROM payroll_terminations WHERE person_id=?",(p["id"],)).fetchone():
+                hire_day=_payroll_hire_date(p["hire_date"])
+                effective=hire_day if hire_day and hire_day<=date.today() else date.today()
+                con.execute("""INSERT OR IGNORE INTO payroll_assignments
+                  (person_id,ministry_id,school_name,start_date,event_type,created_at)
+                  VALUES(?,?,?,?,'initial',?)""",
+                  (p["id"],str(r["ministry_id"] or ""),str(r["school_name"] or ""),
+                   effective.isoformat(),datetime.now().isoformat(timespec="seconds")))
+
+def _payroll_find_person(con,search):
+    key=_payroll_normalize(search)
+    if not key:raise HTTPException(400,"ادخل رقم الموظف أو هويته أو اسمه")
+    people=con.execute("SELECT * FROM payroll_people").fetchall()
+    exact=[p for p in people if key in (_payroll_normalize(p["employee_id"]),_payroll_normalize(p["identity_no"]),_payroll_normalize(p["employee_name"]))]
+    matches=exact if exact else [p for p in people if key in _payroll_normalize(p["employee_name"])]
+    if not matches:raise HTTPException(404,"الموظف غير موجود")
+    if len(matches)!=1:raise HTTPException(409,"أكثر من موظف مطابق؛ استخدم الرقم الوظيفي أو الهوية")
+    return matches[0]
+
+def _payroll_apply_movement(con,person,action,effective_date,ministry_id="",reason=""):
+    # One open assignment at most; date ranges use inclusive endpoints.
+    if action not in ("transfer","termination"):raise HTTPException(400,"حركة غير صالحة")
+    try:effective=date.fromisoformat(effective_date)
+    except ValueError:raise HTTPException(400,"تاريخ غير صالح")
+    open_rows=con.execute("""SELECT * FROM payroll_assignments WHERE person_id=? AND end_date IS NULL
+      ORDER BY start_date DESC""",(person["id"],)).fetchall()
+    if len(open_rows)!=1:raise HTTPException(409,"يجب مراجعة فترات تسكين الموظف قبل تسجيل الحركة")
+    old=open_rows[0]
+    if effective<=date.fromisoformat(old["start_date"]):raise HTTPException(409,"تاريخ الحركة يجب أن يكون بعد بداية التسكين الحالي")
+    if con.execute("SELECT 1 FROM payroll_terminations WHERE person_id=?",(person["id"],)).fetchone():
+        raise HTTPException(409,"الموظف منتهي الخدمة بالفعل")
+    if action=="transfer":
+        school=con.execute("SELECT ministry_id,school_name FROM schools WHERE ministry_id=?",(ministry_id,)).fetchone()
+        if not school:raise HTTPException(404,"الرقم الوزاري للمدرسة الجديدة غير موجود")
+        if old["ministry_id"]==str(ministry_id):raise HTTPException(409,"الموظف مسكن بالفعل في المدرسة المحددة")
+        con.execute("UPDATE payroll_assignments SET end_date=? WHERE id=?",((effective-timedelta(days=1)).isoformat(),old["id"]))
+        con.execute("""INSERT INTO payroll_assignments(person_id,ministry_id,school_name,start_date,event_type,created_at)
+          VALUES(?,?,?,?,'transfer',?)""",(person["id"],str(ministry_id),str(school["school_name"] or ""),
+          effective.isoformat(),datetime.now().isoformat(timespec="seconds")))
+    else:
+        # Termination date is LAST paid work day, not first day off payroll.
+        con.execute("UPDATE payroll_assignments SET end_date=? WHERE id=?",(effective.isoformat(),old["id"]))
+        con.execute("""INSERT INTO payroll_terminations(person_id,last_work_date,reason,recorded_at)
+          VALUES(?,?,?,?)""",(person["id"],effective.isoformat(),reason[:500],datetime.now().isoformat(timespec="seconds")))
+
+@app.post("/payroll/movement")
+def payroll_movement(request:Request,search:str=Form(...),action:str=Form(...),
+                     effective_date:str=Form(...),ministry_id:str=Form(""),reason:str=Form("")):
+    user=require_permission(request,"school_import")
+    if user["role"] not in ("admin","manager"):raise HTTPException(403)
+    con=db()
+    try:
+        _payroll_schema(con)
+        _payroll_sync(con)
+        person=_payroll_find_person(con,search)
+        _payroll_apply_movement(con,person,action,effective_date,ministry_id.strip(),reason)
+        con.commit()
+    finally:con.close()
+    day=date.fromisoformat(effective_date)
+    label=(day if day.day<=23 else day+timedelta(days=12)).strftime("%Y-%m")
+    return RedirectResponse("/payroll?month="+label,status_code=303)
 
 def _payroll_period(month):
     # Payroll labeled YYYY-MM ends on the 23rd of that month.

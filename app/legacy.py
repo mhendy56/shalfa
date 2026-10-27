@@ -4309,8 +4309,12 @@ async def school_import_execute(request: Request, file: UploadFile=File(...), re
             if len(matched)*2 < len(incoming):
                 raise HTTPException(400,detail=f"نسبة المطابقة منخفضة ({len(matched)} من {len(incoming)})؛ تم إلغاء الاستبدال لحماية البيانات")
             now=datetime.utcnow().isoformat()
+            for table, cols in {"schools":("guard_hire_date","coordinator_hire_date"),"guard_master":("hire_date",),"coordinator_master":("hire_date",),"personnel_master":("hire_date",)}.items():
+                existing={c["name"] for c in con.execute(f"PRAGMA table_info({table})")}
+                for col in cols:
+                    if col not in existing: con.execute(f"ALTER TABLE {table} ADD COLUMN {col} TEXT")
             # Clear old CURRENT placements, including schools absent from the new file.
-            con.execute("UPDATE schools SET guard_name='',guard_emp_id='',guard_id='',guard_mobile='',coordinator_name='',coordinator_emp_id='',coordinator_mobile=''")
+            con.execute("UPDATE schools SET guard_name='',guard_emp_id='',guard_id='',guard_mobile='',coordinator_name='',coordinator_emp_id='',coordinator_mobile='',guard_hire_date='',coordinator_hire_date=''")
             con.execute("DELETE FROM personnel_master WHERE role_title IN ('بواب','منسق / مشرف')")
             con.execute("DELETE FROM guard_master")
             con.execute("DELETE FROM coordinator_master")
@@ -4319,24 +4323,26 @@ async def school_import_execute(request: Request, file: UploadFile=File(...), re
                 row=incoming[mid]
                 guard=_pick(row,"البواب");gmobile=_pick(row,"رقم جوال البواب");gid=_pick(row,"رقم هوية البواب")
                 supervisor=_pick(row,"اسم المشرف");smobile=_pick(row,"رقم جوال المشرف");sid=_pick(row,"رقم هوية المشرف")
+                ghire=_pick(row,"تاريخ تعيين البواب") if guard and _pick(row,"مطابقة البواب")=="مطابق" else ""
+                shire=_pick(row,"تاريخ تعيين المشرف") if supervisor and _pick(row,"مطابقة المشرف")=="مطابق" else ""
                 gemp=("G-"+gid) if gid else ("G-"+guard) if guard else ""
                 semp=("S-"+sid) if sid else ("S-"+supervisor) if supervisor else ""
-                con.execute("UPDATE schools SET guard_name=?,guard_emp_id=?,guard_id=?,guard_mobile=?,coordinator_name=?,coordinator_emp_id=?,coordinator_mobile=? WHERE ministry_id=?",
-                    (guard,gemp,gid,gmobile,supervisor,semp,smobile,mid))
+                con.execute("UPDATE schools SET guard_name=?,guard_emp_id=?,guard_id=?,guard_mobile=?,coordinator_name=?,coordinator_emp_id=?,coordinator_mobile=?,guard_hire_date=?,coordinator_hire_date=? WHERE ministry_id=?",
+                    (guard,gemp,gid,gmobile,supervisor,semp,smobile,ghire,shire,mid))
                 if guard and gemp:
-                    guards[gemp]=(guard,gid,gmobile,mid)
+                    guards[gemp]=(guard,gid,gmobile,mid,ghire)
                 if supervisor and semp:
-                    supervisors[semp]=(supervisor,sid,smobile,mid)
-            for emp,(name,id_no,mobile,mid) in guards.items():
-                con.execute("INSERT INTO guard_master(emp_id,emp_name,id_no,mobile,status,linked_ministry_id) VALUES(?,?,?,?,?,?)",
-                    (emp,name,id_no,mobile,"نشط",mid))
-                con.execute("INSERT INTO personnel_master(emp_id,full_name,id_no,mobile,role_title,linked_ministry_id,is_active,imported_at) VALUES(?,?,?,?,?,?,1,?)",
-                    (emp,name,id_no,mobile,"بواب",mid,now))
-            for emp,(name,id_no,mobile,mid) in supervisors.items():
-                con.execute("INSERT INTO coordinator_master(emp_id,full_name,mobile,is_active,created_at,updated_at) VALUES(?,?,?,1,?,?)",
-                    (emp,name,mobile,now,now))
-                con.execute("INSERT INTO personnel_master(emp_id,full_name,id_no,mobile,role_title,linked_ministry_id,is_active,imported_at) VALUES(?,?,?,?,?,?,1,?)",
-                    (emp,name,id_no,mobile,"منسق / مشرف",mid,now))
+                    supervisors[semp]=(supervisor,sid,smobile,mid,shire)
+            for emp,(name,id_no,mobile,mid,hire_date) in guards.items():
+                con.execute("INSERT INTO guard_master(emp_id,emp_name,id_no,mobile,status,linked_ministry_id,hire_date) VALUES(?,?,?,?,?,?,?)",
+                    (emp,name,id_no,mobile,"نشط",mid,hire_date))
+                con.execute("INSERT INTO personnel_master(emp_id,full_name,id_no,mobile,role_title,linked_ministry_id,is_active,imported_at,hire_date) VALUES(?,?,?,?,?,?,1,?,?)",
+                    (emp,name,id_no,mobile,"بواب",mid,now,hire_date))
+            for emp,(name,id_no,mobile,mid,hire_date) in supervisors.items():
+                con.execute("INSERT INTO coordinator_master(emp_id,full_name,mobile,is_active,created_at,updated_at,hire_date) VALUES(?,?,?,1,?,?,?)",
+                    (emp,name,mobile,now,now,hire_date))
+                con.execute("INSERT INTO personnel_master(emp_id,full_name,id_no,mobile,role_title,linked_ministry_id,is_active,imported_at,hire_date) VALUES(?,?,?,?,?,?,1,?,?)",
+                    (emp,name,id_no,mobile,"منسق / مشرف",mid,now,hire_date))
             con.execute("INSERT INTO master_import_log(file_name,imported_at,imported_by,schools_count,guards_count,coordinators_count,administrators_count,archived_schools_count,mode,notes) VALUES(?,?,?,?,?,?,?,?,?,?)",
                 (file.filename,now,user["id"],len(matched),len(guards),len(supervisors),0,0,"استبدال تسكين الموظفين",f"Matched {len(matched)}/{len(incoming)} schools"))
             con.commit()

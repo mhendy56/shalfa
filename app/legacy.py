@@ -4542,7 +4542,7 @@ def _payroll_hire_date(value):
 def payroll_page(request: Request,month: str=""):
     require_permission(request,"school_import")
     from html import escape
-    month=month or date.today().strftime("%Y-%m")
+    month=month or (date.today() if date.today().day<=23 else date.today()+timedelta(days=12)).strftime("%Y-%m")
     if not re.fullmatch(r"20\d{2}-(0[1-9]|1[0-2])",month):
         raise HTTPException(400,"شهر غير صالح")
     period_start,period_end=_payroll_period(month)
@@ -4559,24 +4559,55 @@ def payroll_page(request: Request,month: str=""):
           ON p.id=d.person_id AND d.work_date BETWEEN ? AND ?
           GROUP BY p.id ORDER BY p.school_name,p.role,p.employee_name""",
           (period_start.isoformat(),period_end.isoformat())).fetchall()
-        def payroll_amount(p):
-            hire=_payroll_hire_date(p["hire_date"])
-            active_start=max(period_start,hire) if hire else period_start
-            days=max(0,(period_end-active_start).days+1)
-            base=round(float(p["base_salary"])*min(days,30)/30,2) if hire and active_start>period_start else float(p["base_salary"])
-            absent=int(p["absent_days"] or 0)
-            absence_cost=absent*(200 if p["role"]=="guard" else 300)
-            return days,base,absence_cost,base+float(p["overtime"])-float(p["deductions"])-absence_cost
-        total=sum(payroll_amount(p)[3] for p in people)
-        absence_total=sum(int(p["absent_days"] or 0) for p in people)
-        opts="".join('<option value="'+str(p["id"])+'">'+escape(p["employee_name"])+' ('+escape(p["employee_id"])+')</option>' for p in people)
-        trs="".join("<tr><td>"+escape(p["school_name"] or "غير محددة")+"</td><td>"+escape(p["employee_name"])+"</td><td>"+("بواب" if p["role"]=="guard" else "مشرف")+"</td><td>"+escape(p["employee_id"])+"</td><td>"+escape(p["hire_date"] or "غير مسجل")+"</td><td>"+str(payroll_amount(p)[0])+"</td><td>"+str(p["absent_days"] or 0)+"</td><td>"+f'{payroll_amount(p)[1]:,.2f}'+"</td><td>"+f'{p["overtime"]:,.2f}'+"</td><td>"+f'{payroll_amount(p)[2]:,.2f}'+"</td><td>"+f'{p["deductions"]:,.2f}'+"</td><td>"+f'{payroll_amount(p)[3]:,.2f}'+"</td></tr>" for p in people)
+        assignments=con.execute("""SELECT * FROM payroll_assignments
+          WHERE start_date<=? AND (end_date IS NULL OR end_date>=?)
+          ORDER BY school_name,person_id,start_date""",
+          (period_end.isoformat(),period_start.isoformat())).fetchall()
+        by_person={}
+        for row in assignments:by_person.setdefault(row["person_id"],[]).append(row)
+        terminations={r["person_id"]:r["last_work_date"] for r in
+          con.execute("SELECT person_id,last_work_date FROM payroll_terminations").fetchall()}
+        def segments(person):
+            hire=_payroll_hire_date(person["hire_date"])
+            termination=_payroll_hire_date(terminations.get(person["id"]))
+            out=[]
+            for assignment in by_person.get(person["id"],[]):
+                first=max(period_start,date.fromisoformat(assignment["start_date"]))
+                last=min(period_end,date.fromisoformat(assignment["end_date"]) if assignment["end_date"] else period_end)
+                if hire:first=max(first,hire)
+                if termination:last=min(last,termination)
+                if first<=last:out.append((assignment,(last-first).days+1))
+            return out
+        def payroll_amount(person):
+            days=min(30,sum(days for _,days in segments(person)))
+            base=round(float(person["base_salary"])*days/30,2)
+            absent=int(person["absent_days"] or 0)
+            absence_cost=absent*(200 if person["role"]=="guard" else 300)
+            return days,base,absence_cost,base+float(person["overtime"])-float(person["deductions"])-absence_cost
+        active_people=[person for person in people if segments(person)]
+        total=sum(payroll_amount(person)[3] for person in active_people)
+        absence_total=sum(int(person["absent_days"] or 0) for person in active_people)
+        opts="".join('<option value="'+str(person["id"])+'">'+escape(person["employee_name"])+' ('+escape(person["employee_id"])+')</option>' for person in active_people)
+        # School rows are distribution rows. The financial total is counted ONCE per person.
+        # Monetary columns are displayed only on the first school row to avoid duplication.
+        school_rows=[]
+        for person in active_people:
+            for idx,(assignment,days) in enumerate(segments(person)):
+                school_rows.append((assignment["school_name"] or "غير محددة",person,days,idx))
+        school_rows.sort(key=lambda item:(item[0],item[1]["employee_name"]))
+        trs="".join("<tr><td>"+escape(school)+"</td><td>"+escape(person["employee_name"])+"</td><td>"+("بواب" if person["role"]=="guard" else "مشرف")+"</td><td>"+escape(person["employee_id"])+"</td><td>"+escape(person["hire_date"] or "غير مسجل")+"</td><td>"+str(days)+"</td><td>"+(str(person["absent_days"] or 0) if idx==0 else "—")+"</td><td>"+(f'{payroll_amount(person)[1]:,.2f}' if idx==0 else "—")+"</td><td>"+(f'{person["overtime"]:,.2f}' if idx==0 else "—")+"</td><td>"+(f'{payroll_amount(person)[2]:,.2f}' if idx==0 else "—")+"</td><td>"+(f'{person["deductions"]:,.2f}' if idx==0 else "—")+"</td><td>"+(f'{payroll_amount(person)[3]:,.2f}' if idx==0 else "—")+"</td></tr>" for school,person,days,idx in school_rows)
         return HTMLResponse("""<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>مسير الرواتب</title>
         <style>body{{font-family:Tahoma,Arial;background:#f3f6fb;color:#152b4a;margin:20px}}section{{background:white;padding:18px;border-radius:12px;margin:12px 0}}input,select,button{{padding:10px;margin:5px;border:1px solid #bbc7d8;border-radius:6px}}button{{background:#143b72;color:white;cursor:pointer}}table{{border-collapse:collapse;width:100%}}td,th{{padding:9px;border:1px solid #d8e0e9;text-align:right}}th{{background:#143b72;color:white}}.scroll{{overflow:auto}}</style>
         <h1>مسير الرواتب الشهري</h1><p><a href="/">الرئيسية</a> | البواب 3000 ريال، المشرف 4500 ريال | خصم الغياب: 200 للبواب و300 للمشرف</p>
         <section><form method="get"><label>شهر المسير <input type="month" name="month" value="{month}"></label><button>عرض المسير</button></form>
         <h3>الفترة: {period_start} إلى {period_end}</h3><h2>إجمالي المستحقات: {total:,.2f} ريال</h2>
-        <p>الجميع حاضر افتراضيًا؛ الغياب المسجل {absence_total} يوم. الموظف الجديد يبدأ احتسابه من تاريخ التعيين. أساس تجزئة راتب المنضم خلال الدورة: 30 يومًا.</p></section>
+        <p>الحساب يعتمد على فترات التسكين التاريخية المسجلة، ولا يستنتج تواريخ النقل القديمة تلقائيًا. جميع الموظفين حاضرون افتراضيًا؛ الغياب المسجل {absence_total} يوم. الموظف الجديد يبدأ احتسابه من تاريخ التعيين. أساس تجزئة راتب المنضم خلال الدورة: 30 يومًا.</p></section>
+        <section><h2>تسجيل نقل أو إنهاء خدمة</h2><p>صلاحية المدير فقط. تاريخ النقل هو أول يوم في المدرسة الجديدة، وتاريخ الفصل هو آخر يوم عمل مستحق.</p>
+        <form method="post" action="/payroll/movement"><label>الموظف <input name="search" required placeholder="الرقم الوظيفي / الهوية / الاسم"></label>
+        <label>الحركة <select name="action"><option value="transfer">نقل</option><option value="termination">إنهاء خدمة</option></select></label>
+        <label>تاريخ الحركة <input type="date" name="effective_date" required></label>
+        <label>الرقم الوزاري للمدرسة الجديدة (للنقل) <input name="ministry_id"></label>
+        <label>سبب / ملاحظات <input name="reason" maxlength="500"></label><button>تسجيل الحركة</button></form></section>
         <section><h2>تسجيل غياب بالرقم الوظيفي أو الاسم أو الهوية</h2><form method="post" action="/payroll/absence"><label>الموظف <input name="search" required placeholder="الرقم الوظيفي / الهوية / الاسم"></label><label>اليوم <input type="date" name="work_date" value="{today}" min="{period_start}" max="{period_end}" required></label><label>ملاحظة <input name="notes" maxlength="500"></label><button>تسجيل غياب</button></form></section>
         <section><h2>الإضافي والخصومات وتعديل حالة يوم</h2><form method="post" action="/payroll/daily">
         <label>الموظف <select name="person_id" required>{opts}</select></label>
@@ -4585,7 +4616,7 @@ def payroll_page(request: Request,month: str=""):
         <label>الإضافي بالريال <input name="overtime_amount" type="number" min="0" step="0.01" value="0"></label>
         <label>خصومات أخرى <input name="deduction_amount" type="number" min="0" step="0.01" value="0"></label>
         <label>ملاحظات <input name="notes" maxlength="500"></label><button>حفظ</button></form></section>
-        <section class="scroll"><h2>كشف المسير حسب المدرسة</h2><table><thead><tr><th>المدرسة</th><th>الموظف</th><th>الوظيفة</th><th>الرقم الوظيفي</th><th>تاريخ التعيين</th><th>أيام الفترة المحتسبة</th><th>غياب</th><th>الأساسي المستحق</th><th>الإضافي</th><th>خصم الغياب</th><th>خصومات أخرى</th><th>الإجمالي</th></tr></thead><tbody>{trs}</tbody></table></section>
+        <section class="scroll"><h2>كشف المسير حسب المدرسة</h2><p>المنقول يظهر تحت كل مدرسة بأيامها؛ المبالغ تظهر مرة واحدة فقط لكل موظف، ولا تُكرر عند جمع المسير.</p><table><thead><tr><th>المدرسة</th><th>الموظف</th><th>الوظيفة</th><th>الرقم الوظيفي</th><th>تاريخ التعيين</th><th>أيام الفترة المحتسبة</th><th>غياب</th><th>الأساسي المستحق</th><th>الإضافي</th><th>خصم الغياب</th><th>خصومات أخرى</th><th>الإجمالي</th></tr></thead><tbody>{trs}</tbody></table></section>
         </html>""".format(month=month,period_start=period_start,period_end=period_end,total=total,
           absence_total=absence_total,opts=opts,trs=trs,
           today=min(max(date.today(),period_start),period_end)))

@@ -77,6 +77,14 @@
 <label class="full">ملفات الموظفين Employee (يمكن اختيار أكثر من ملف)<input type="file" name="files" accept=".xls" multiple required></label>
 <button class="full" type="submit">تحديث تواريخ التعيين فقط</button>
 </form></div>
+<div class="panel" style="margin-bottom:18px">
+<h3>تحديث نوع وحجم المدرسة وبياناتها من Master Data</h3>
+<p>تحديث بالرقم الوزاري للحقول المتوفرة فقط: حجم المبنى، النوع، المرحلة، عدد الفصول، الحي، مكتب التعليم، الملكية وتصنيف الوحدة. لا يتم تغيير التسكين أو الحضور أو الإحداثيات.</p>
+{% if request.query_params.get('details_updated') is not none %}<p style="color:green;font-weight:bold">تم تحديث {{request.query_params.get('details_updated')}} مدرسة.</p>{% endif %}
+<form method="post" action="/school-import/school-details" enctype="multipart/form-data" class="form-grid">
+<label class="full">Master Data V1.0<input type="file" name="file" accept=".xlsx" required></label>
+<button class="full" type="submit">تحديث بيانات المدارس فقط</button>
+</form></div>
 <div class="two-cols">
 <form class="panel form-grid" method="post" enctype="multipart/form-data" action="/school-import">
 <h3>استيراد المدارس والموظفين</h3>

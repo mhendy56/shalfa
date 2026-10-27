@@ -164,9 +164,9 @@ function openSchoolCard(s){
       <div class="school-card-title"><span>🏫</span><div><h1>${display(s.school_name)}</h1><p>${display(s.city)} — ${display(s.operational_type||s.school_type)}</p></div></div>
       <div class="school-summary-grid">
         <div><small>الرقم الوزاري</small><b>${display(s.ministry_id)}</b></div>
-        <div><small>نوع المدرسة</small><b>${display(s.operational_type||s.school_type)}</b></div>
+        <div><small>نوع المدرسة</small><b>${display(s.unit_classification||s.operational_type||s.school_type)}</b></div>
         <div><small>النوع</small><b class="blue-value">${display(s.gender)}</b></div>
-        <div><small>الحجم</small><b class="green-value">${display(s.size)}</b></div>
+        <div><small>حجم المدرسة</small><b class="green-value">${display(s.size)}</b></div>
       </div>
       <article class="person-profile guard-profile"><span class="profile-icon">👤</span><small>البواب</small><h2>${display(guardName)}</h2><p>الرقم الوظيفي: ${display(s.guard_emp_id)}<br>الجوال: ${display(s.guard_mobile)}<br>تاريخ التعيين: ${display(s.guard_hire_date)}</p>${contactButtons(guardName,s.guard_mobile)}</article>
       <article class="person-profile coordinator-profile"><span class="profile-icon">👥</span><small>المنسق / المشرف</small><h2>${display(coordName)}</h2><p>الرقم الوظيفي: ${display(s.coordinator_emp_id)}<br>الجوال: ${display(s.coordinator_mobile)}<br>تاريخ التعيين: ${display(s.coordinator_hire_date)}</p>${contactButtons(coordName,s.coordinator_mobile)}</article>
@@ -191,9 +191,11 @@ function openSchoolCard(s){
         ${infoRow('🏢','الحي',display(s.district))}
         ${infoRow('🎓','المرحلة',display(s.stage))}
         ${infoRow('👤','النوع',display(s.gender))}
-        ${infoRow('⭐','نوع المدرسة',display(s.operational_type||s.school_type))}
-        ${infoRow('📊','الحجم',display(s.size))}
+        ${infoRow('⭐','نوع المدرسة',display(s.unit_classification||s.operational_type||s.school_type))}
+        ${infoRow('📊','حجم المدرسة',display(s.size))}
         ${infoRow('📖','عدد الفصول',display(s.classrooms_count))}
+        ${infoRow('🏷️','تصنيف الوحدة',display(s.unit_classification))}
+        ${infoRow('🏠','ملكية المبنى',display(s.building_ownership))}
         ${infoRow('👥','الطاقة الاستيعابية',s.capacity?display(s.capacity)+' طالب':'—')}
         ${infoRow('🏛️','الإدارة التعليمية',display(s.education_admin))}
         ${infoRow('💼','المكتب التعليمي',display(s.education_office))}

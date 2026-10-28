@@ -4611,14 +4611,11 @@ def _payroll_export_from_template(wb,ws,people,grouped,termination,start,end,mon
         daily=con.execute("SELECT person_id,work_date,attendance_status FROM payroll_daily WHERE work_date BETWEEN ? AND ?",(start.isoformat(),end.isoformat())).fetchall()
         status={(r["person_id"],r["work_date"]):r["attendance_status"] for r in daily}
     finally:con.close()
+    from copy import copy
     supervisors=[]
     overflow=[]
     unassigned=[]
-    for p in people:
-        if p["role"]!="guard":continue
-        if not grouped.get(p["id"]):
-            unassigned.append((p["employee_name"],p["employee_id"],p["identity_no"],p["school_name"],p["ministry_id"],"لا يوجد تسكين تاريخي في الفترة"))
-
+    placements={}
     for p in people:
         hire=_payroll_hire_date(p["hire_date"])
         term=_payroll_hire_date(termination.get(p["id"]))
@@ -4629,11 +4626,14 @@ def _payroll_export_from_template(wb,ws,people,grouped,termination,start,end,mon
             if hire:first=max(first,hire)
             if term:last=min(last,term)
             if first<=last:segments.append((a,first,last))
-        if not segments:
-            if p["role"]=="guard" and grouped.get(p["id"]):
-                unassigned.append((p["employee_name"],p["employee_id"],p["identity_no"],p["school_name"],p["ministry_id"],"التسكين خارج فترة المسير"))
-            continue
-        days=min(30,sum((last-first).days+1 for _,first,last in segments))
+        if not segments and p["role"]=="guard":
+            reason="التسكين خارج فترة المسير" if grouped.get(p["id"]) else "لا يوجد تسكين تاريخي"
+            unassigned.append((p["employee_name"],p["employee_id"],p["identity_no"],p["school_name"],p["ministry_id"],reason))
+            # Display current guards even if historical dates require review; do not assign paid days.
+            pseudo={"ministry_id":p["ministry_id"],"school_name":p["school_name"]}
+            segments=[(pseudo,None,None)]
+        if not segments:continue
+        days=min(30,sum((last-first).days+1 for _,first,last in segments if first is not None))
         base=round(float(p["base_salary"])*days/30,2)
         absence=int(p["absent_days"] or 0)*(200 if p["role"]=="guard" else 300)
         net=base+float(p["overtime"])-float(p["deductions"])-absence
@@ -4642,25 +4642,39 @@ def _payroll_export_from_template(wb,ws,people,grouped,termination,start,end,mon
             continue
         for index,(a,first,last) in enumerate(segments):
             mid=str(a["ministry_id"] or "").strip()
-            row=school_by_id.get(mid) or school_by_name.get(_payroll_normalize(a["school_name"]))
+            row=school_by_id.get(mid) or school_by_name.get(_payroll_normalize(a["school_name"] or ""))
             if not row:
                 overflow.append((a,p,first,last,net if index==0 else 0))
                 continue
-            # Additional staff at the same school go in a separate supplemental sheet;
-            # never insert rows into the fixed October sequence.
-            if ws.cell(row,8).value:
-                overflow.append((a,p,first,last,net if index==0 else 0))
-                continue
+            placements.setdefault(row,[]).append((p,first,last))
+    # Insert additional guards immediately below their school, working bottom-up
+    # so the October school sequence remains unchanged.
+    for original_row in sorted(placements,reverse=True):
+        entries=placements[original_row]
+        if len(entries)>1:
+            ws.insert_rows(original_row+1,amount=len(entries)-1)
+            for offset in range(1,len(entries)):
+                target=original_row+offset
+                for col in range(1,ws.max_column+1):
+                    source=ws.cell(original_row,col)
+                    dest=ws.cell(target,col)
+                    dest._style=copy(source._style)
+                    dest.alignment=copy(source.alignment)
+                    dest.number_format=source.number_format
+                    if col<=7:dest.value=source.value
+                ws.row_dimensions[target].height=ws.row_dimensions[original_row].height
+        for offset,(p,first,last) in enumerate(entries):
+            row=original_row+offset
             ws.cell(row,8).value=p["employee_name"]
             ws.cell(row,10).value=p["identity_no"]
             ws.cell(row,11).value=p["employee_id"]
             ws.cell(row,12).value=p["hire_date"]
-            ws.cell(row,15).value="على رأس العمل"
-            for col,d in enumerate(dates[:31],16):
-                if first<=d<=last:
-                    value=status.get((p["id"],d.isoformat()),"حاضر")
-                    ws.cell(row,col).value="ر" if d.weekday()==4 else ("غ" if value=="غائب" else "ح")
-            # Salary totals are provided in an independent editable sheet.
+            ws.cell(row,15).value="على رأس العمل" if first is not None else "مراجعة تاريخ التسكين"
+            if first is not None:
+                for col,d in enumerate(dates[:31],16):
+                    if first<=d<=last:
+                        value=status.get((p["id"],d.isoformat()),"حاضر")
+                        ws.cell(row,col).value="ر" if d.weekday()==4 else ("غ" if value=="غائب" else "ح")
     missing=wb["بوابون يحتاجون مراجعة"] if "بوابون يحتاجون مراجعة" in wb.sheetnames else wb.create_sheet("بوابون يحتاجون مراجعة")
     missing.delete_rows(1,missing.max_row)
     missing.append(["اسم البواب","الرقم الوظيفي","الهوية","المدرسة الحالية","الرقم الوزاري","سبب عدم الظهور"])

@@ -4613,6 +4613,12 @@ def _payroll_export_from_template(wb,ws,people,grouped,termination,start,end,mon
     finally:con.close()
     supervisors=[]
     overflow=[]
+    unassigned=[]
+    for p in people:
+        if p["role"]!="guard":continue
+        if not grouped.get(p["id"]):
+            unassigned.append((p["employee_name"],p["employee_id"],p["identity_no"],p["school_name"],p["ministry_id"],"لا يوجد تسكين تاريخي في الفترة"))
+
     for p in people:
         hire=_payroll_hire_date(p["hire_date"])
         term=_payroll_hire_date(termination.get(p["id"]))
@@ -4623,7 +4629,10 @@ def _payroll_export_from_template(wb,ws,people,grouped,termination,start,end,mon
             if hire:first=max(first,hire)
             if term:last=min(last,term)
             if first<=last:segments.append((a,first,last))
-        if not segments:continue
+        if not segments:
+            if p["role"]=="guard" and grouped.get(p["id"]):
+                unassigned.append((p["employee_name"],p["employee_id"],p["identity_no"],p["school_name"],p["ministry_id"],"التسكين خارج فترة المسير"))
+            continue
         days=min(30,sum((last-first).days+1 for _,first,last in segments))
         base=round(float(p["base_salary"])*days/30,2)
         absence=int(p["absent_days"] or 0)*(200 if p["role"]=="guard" else 300)
@@ -4650,8 +4659,15 @@ def _payroll_export_from_template(wb,ws,people,grouped,termination,start,end,mon
             for col,d in enumerate(dates[:31],16):
                 if first<=d<=last:
                     value=status.get((p["id"],d.isoformat()),"حاضر")
-                    ws.cell(row,col).value="غ" if value=="غائب" else "ح"
+                    ws.cell(row,col).value="ر" if d.weekday()==4 else ("غ" if value=="غائب" else "ح")
             # Salary totals are provided in an independent editable sheet.
+    missing=wb["بوابون يحتاجون مراجعة"] if "بوابون يحتاجون مراجعة" in wb.sheetnames else wb.create_sheet("بوابون يحتاجون مراجعة")
+    missing.delete_rows(1,missing.max_row)
+    missing.append(["اسم البواب","الرقم الوظيفي","الهوية","المدرسة الحالية","الرقم الوزاري","سبب عدم الظهور"])
+    for record in unassigned:missing.append(record)
+    missing.sheet_view.rightToLeft=True
+    missing.freeze_panes="B2"
+    for col in range(1,7):missing.column_dimensions[get_column_letter(col)].width=30
     sup=wb["مسير المشرفين"] if "مسير المشرفين" in wb.sheetnames else wb.create_sheet("مسير المشرفين")
     sup.delete_rows(1,sup.max_row)
     sup.append(["اسم المشرف","الرقم الوظيفي","الهوية","أيام الاستحقاق","الراتب المستحق","أيام الغياب","خصم الغياب","الإضافي","خصومات أخرى","إضافة يدوية","خصم يدوي","الصافي"])

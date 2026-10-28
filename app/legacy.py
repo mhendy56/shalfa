@@ -4587,6 +4587,117 @@ async def payroll_import_export_order(request:Request,file:UploadFile=File(...))
     finally:con.close()
     return RedirectResponse("/payroll?order_imported="+str(len(records)),status_code=303)
 
+def _payroll_export_from_template(wb,ws,people,grouped,termination,start,end,month):
+    from openpyxl.styles import PatternFill
+    from openpyxl.utils import get_column_letter
+    from calendar import day_name
+    # Keep every October school in its exact original row and preserve formatting.
+    school_by_id={}
+    school_by_name={}
+    for row in range(2,ws.max_row+1):
+        mid=str(ws.cell(row,4).value or "").strip()
+        school=str(ws.cell(row,3).value or "").strip()
+        if mid:school_by_id[mid]=row
+        if school:school_by_name[_payroll_normalize(school)]=row
+        for col in (8,9,10,11,12,13,14,15):
+            ws.cell(row,col).value=None
+        for col in range(16,47):
+            ws.cell(row,col).value=None
+    dates=[start+timedelta(days=i) for i in range((end-start).days+1)]
+    for col in range(16,47):
+        ws.cell(1,col).value=(str(dates[col-16].day)+" - "+["الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت","الأحد"][dates[col-16].weekday()]) if col-16<len(dates) else ""
+    con=db()
+    try:
+        daily=con.execute("SELECT person_id,work_date,attendance_status FROM payroll_daily WHERE work_date BETWEEN ? AND ?",(start.isoformat(),end.isoformat())).fetchall()
+        status={(r["person_id"],r["work_date"]):r["attendance_status"] for r in daily}
+    finally:con.close()
+    supervisors=[]
+    overflow=[]
+    for p in people:
+        hire=_payroll_hire_date(p["hire_date"])
+        term=_payroll_hire_date(termination.get(p["id"]))
+        segments=[]
+        for a in grouped.get(p["id"],[]):
+            first=max(start,date.fromisoformat(a["start_date"]))
+            last=min(end,date.fromisoformat(a["end_date"]) if a["end_date"] else end)
+            if hire:first=max(first,hire)
+            if term:last=min(last,term)
+            if first<=last:segments.append((a,first,last))
+        if not segments:continue
+        days=min(30,sum((last-first).days+1 for _,first,last in segments))
+        base=round(float(p["base_salary"])*days/30,2)
+        absence=int(p["absent_days"] or 0)*(200 if p["role"]=="guard" else 300)
+        net=base+float(p["overtime"])-float(p["deductions"])-absence
+        if p["role"]!="guard":
+            supervisors.append((p["employee_name"],p["employee_id"],p["identity_no"],days,base,int(p["absent_days"] or 0),absence,float(p["overtime"]),float(p["deductions"]),net))
+            continue
+        for index,(a,first,last) in enumerate(segments):
+            mid=str(a["ministry_id"] or "").strip()
+            row=school_by_id.get(mid) or school_by_name.get(_payroll_normalize(a["school_name"]))
+            if not row:
+                overflow.append((a,p,first,last,net if index==0 else 0))
+                continue
+            # Additional staff at the same school go in a separate supplemental sheet;
+            # never insert rows into the fixed October sequence.
+            if ws.cell(row,8).value:
+                overflow.append((a,p,first,last,net if index==0 else 0))
+                continue
+            ws.cell(row,8).value=p["employee_name"]
+            ws.cell(row,10).value=p["identity_no"]
+            ws.cell(row,11).value=p["employee_id"]
+            ws.cell(row,12).value=p["hire_date"]
+            ws.cell(row,15).value="على رأس العمل"
+            for col,d in enumerate(dates[:31],16):
+                if first<=d<=last:
+                    value=status.get((p["id"],d.isoformat()),"حاضر")
+                    ws.cell(row,col).value="غ" if value=="غائب" else "ح"
+            # Salary totals are provided in an independent editable sheet.
+    sup=wb["مسير المشرفين"] if "مسير المشرفين" in wb.sheetnames else wb.create_sheet("مسير المشرفين")
+    sup.delete_rows(1,sup.max_row)
+    sup.append(["اسم المشرف","الرقم الوظيفي","الهوية","أيام الاستحقاق","الراتب المستحق","أيام الغياب","خصم الغياب","الإضافي","خصومات أخرى","إضافة يدوية","خصم يدوي","الصافي"])
+    for p in supervisors:
+        sup.append(list(p[:9])+[None,None,None])
+        n=sup.max_row
+        sup.cell(n,12,f"=E{n}-G{n}+H{n}-I{n}+J{n}-K{n}")
+    extra=wb["تسويات الرواتب"] if "تسويات الرواتب" in wb.sheetnames else wb.create_sheet("تسويات الرواتب")
+    extra.delete_rows(1,extra.max_row)
+    extra.append(["المدرسة","الرقم الوزاري","الموظف","الرقم الوظيفي","أيام المدرسة","المستحق الأساسي","الإضافي","خصم الغياب","خصومات أخرى","إضافة يدوية","خصم يدوي","الصافي","ملاحظات"])
+    for p in people:
+        if p["role"]!="guard":continue
+        seg=[]
+        for a in grouped.get(p["id"],[]):
+            first=max(start,date.fromisoformat(a["start_date"]))
+            last=min(end,date.fromisoformat(a["end_date"]) if a["end_date"] else end)
+            hire=_payroll_hire_date(p["hire_date"])
+            term=_payroll_hire_date(termination.get(p["id"]))
+            if hire:first=max(first,hire)
+            if term:last=min(last,term)
+            if first<=last:seg.append((a,(last-first).days+1))
+        if not seg:continue
+        days=min(30,sum(d for _,d in seg))
+        base=round(float(p["base_salary"])*days/30,2)
+        absent=int(p["absent_days"] or 0)*200
+        for index,(a,count) in enumerate(seg):
+            extra.append([a["school_name"],a["ministry_id"],p["employee_name"],p["employee_id"],count,base if index==0 else 0,float(p["overtime"]) if index==0 else 0,absent if index==0 else 0,float(p["deductions"]) if index==0 else 0,None,None,None,"" if index==0 else "توزيع فقط"])
+            n=extra.max_row
+            extra.cell(n,12,f"=F{n}+G{n}-H{n}-I{n}+J{n}-K{n}")
+    extra.sheet_view.rightToLeft=True
+    sup.sheet_view.rightToLeft=True
+    for sheet in (sup,extra):
+        sheet.freeze_panes="C2"
+        sheet.auto_filter.ref=sheet.dimensions
+        for col in range(1,sheet.max_column+1):
+            sheet.column_dimensions[get_column_letter(col)].width=26
+        for cell in sheet[1]:
+            cell.fill=PatternFill("solid",fgColor="17365D")
+        for row in sheet.iter_rows(min_row=2):
+            for col in ((10,11) if sheet==extra else (10,11)):
+                row[col-1].fill=PatternFill("solid",fgColor="FFF2CC")
+    out=BytesIO()
+    wb.save(out)
+    out.seek(0)
+    return StreamingResponse(out,media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",headers={"Content-Disposition":'attachment; filename="payroll-'+month+'.xlsx"'})
+
 @app.get("/payroll/export")
 def payroll_export_excel(request:Request,month:str=""):
     require_permission(request,"school_import")

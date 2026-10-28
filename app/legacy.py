@@ -4404,6 +4404,10 @@ def _payroll_schema(con):
       hire_date TEXT NOT NULL DEFAULT '',
       UNIQUE(role,employee_id)
     );
+    CREATE TABLE IF NOT EXISTS payroll_template (
+      id INTEGER PRIMARY KEY CHECK(id=1),
+      workbook BLOB NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS payroll_school_order (
       sequence_no INTEGER PRIMARY KEY,
       ministry_id TEXT NOT NULL DEFAULT '',
@@ -4574,6 +4578,7 @@ async def payroll_import_export_order(request:Request,file:UploadFile=File(...))
     con=db()
     try:
         _payroll_schema(con)
+        con.execute("INSERT OR REPLACE INTO payroll_template(id,workbook) VALUES(1,?)",(raw,))
         con.execute("DELETE FROM payroll_school_order")
         for seq,ministry,school in records:
             con.execute("""INSERT INTO payroll_school_order(sequence_no,ministry_id,school_name)
@@ -4610,8 +4615,12 @@ def payroll_export_excel(request:Request,month:str=""):
             "SELECT person_id,last_work_date FROM payroll_terminations").fetchall()}
         grouped={}
         for a in assignments:grouped.setdefault(a["person_id"],[]).append(a)
-        wb=Workbook()
-        ws=wb.active
+        template=con.execute("SELECT workbook FROM payroll_template WHERE id=1").fetchone()
+        wb=load_workbook(BytesIO(template["workbook"])) if template else Workbook()
+        ws=wb["مسير البوابين"] if template and "مسير البوابين" in wb.sheetnames else wb.active
+        if template:
+            return _payroll_export_from_template(wb,ws,people,grouped,termination,period_start,period_end,month)
+
         ws.title="مسير "+month
         ws.sheet_view.rightToLeft=True
         ws.append(["المدرسة","الرقم الوزاري","اسم الموظف","الوظيفة","الرقم الوظيفي","الهوية",

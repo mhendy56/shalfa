@@ -1,4 +1,10 @@
 (() => {
+  // Load the shared language selector on every PWA-enabled screen.
+  const languageScript = document.createElement('script');
+  languageScript.src = '/static/i18n.js?v=1';
+  languageScript.defer = true;
+  document.head.appendChild(languageScript);
+
   let deferredPrompt = null;
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 

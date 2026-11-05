@@ -142,6 +142,48 @@
     'تسجيل الدخول':'Sign in','تسجيل الخروج':'Sign out',
     'إعداد: محمد هندي':'Prepared by: Mohammed Hendy'
   };
+
+  // Display-only transliteration for Arabic proper nouns and free-text records.
+  // Exact approved English spellings should be supplied in master data for official exports.
+  var nameWords = {
+    'محمد':'Mohamed','أحمد':'Ahmed','احمد':'Ahmed','محمود':'Mahmoud',
+    'عبدالله':'Abdullah','عبد':'Abd','الرحمن':'Alrahman','الرحيم':'Alrahim',
+    'علي':'Ali','عمر':'Omar','خالد':'Khaled','حسن':'Hassan','حسين':'Hussein',
+    'يوسف':'Youssef','إبراهيم':'Ibrahim','ابراهيم':'Ibrahim','سليمان':'Soliman',
+    'هندي':'Hendy','فضل':'Fadl','مسعود':'Masoud','البيشي':'Al-Bishi',
+    'عاصم':'Asim','الزهراني':'Al-Zahrani','القصيم':'Al-Qassim',
+    'الرياض':'Riyadh','بريدة':'Buraidah','عنيزة':'Unaizah','الرس':'Ar Rass',
+    'البكيرية':'Al Bukayriyah','المذنب':'Al Mithnab',
+    'مدرسة':'School','ابتدائية':'Primary School','الإبتدائية':'Primary School',
+    'المتوسطة':'Intermediate School','متوسطة':'Intermediate School',
+    'الثانوية':'Secondary School','ثانوية':'Secondary School',
+    'الروضة':'Kindergarten','روضة':'Kindergarten',
+    'الطفولة':'Early','المبكرة':'Childhood','بنين':'Boys','بنات':'Girls',
+    'الأولى':'First','الثانية':'Second','الثالثة':'Third',
+    'الرابعة':'Fourth','الخامسة':'Fifth'
+  };
+  var letters = {
+    'ا':'a','أ':'a','إ':'i','آ':'aa','ب':'b','ت':'t','ث':'th',
+    'ج':'j','ح':'h','خ':'kh','د':'d','ذ':'dh','ر':'r','ز':'z',
+    'س':'s','ش':'sh','ص':'s','ض':'d','ط':'t','ظ':'z','ع':'a',
+    'غ':'gh','ف':'f','ق':'q','ك':'k','ل':'l','م':'m','ن':'n',
+    'ه':'h','ة':'a','و':'w','ؤ':'o','ي':'y','ى':'a','ئ':'e',
+    'ء':"'",'َ':'','ُ':'','ِ':'','ْ':'','ّ':''
+  };
+  function transliterateArabic(source) {
+    return source.replace(/[\u0621-\u064A\u064B-\u0652]+/g, function(word) {
+      if (nameWords[word]) return nameWords[word];
+      var roman = Array.from(word).map(function(ch){return letters[ch] === undefined ? ch : letters[ch];}).join('');
+      return roman.charAt(0).toUpperCase() + roman.slice(1);
+    });
+  }
+  function isDataContext(node) {
+    var el = node.parentElement;
+    if (!el || !el.closest) return false;
+    if (el.closest('table tbody td, .school-card, .guard-card, .coordinator-card, .org-role, .topbar-user, .summary-head')) return true;
+    return !!el.closest('[data-translate-record]');
+  }
+
   var originalNodes = new WeakMap();
   var lastOutput = new WeakMap();
   var originalAttrs = new WeakMap();
@@ -173,6 +215,9 @@
       originalNodes.set(node, original);
     }
     var next = language === 'en' ? translate(original) : original;
+    if (language === 'en' && next === original && isDataContext(node) && /[\u0621-\u064A]/.test(original)) {
+      next = transliterateArabic(original);
+    }
     lastOutput.set(node, next);
     if (current !== next) node.nodeValue = next;
   }

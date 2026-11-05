@@ -1,9 +1,11 @@
 (() => {
   // Load the shared language selector on every PWA-enabled screen.
-  const languageScript = document.createElement('script');
-  languageScript.src = '/static/i18n.js?v=1';
-  languageScript.defer = true;
-  document.head.appendChild(languageScript);
+  if (!document.querySelector('script[src*="/static/i18n.js"]')) {
+    const languageScript = document.createElement('script');
+    languageScript.src = '/static/i18n.js?v=2';
+    languageScript.defer = true;
+    document.head.appendChild(languageScript);
+  }
 
   let deferredPrompt = null;
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;

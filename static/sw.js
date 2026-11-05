@@ -1,4 +1,4 @@
-const CACHE_NAME='shalfa-ops-v14-6';
+const CACHE_NAME='shalfa-ops-v14-7-lang';
 const STATIC_CACHE=[
   '/static/style.css',
   '/static/icon-192.png',
@@ -7,7 +7,8 @@ const STATIC_CACHE=[
   '/static/shalfa-logo.png',
   '/static/tbc-logo.png',
   '/static/offline.html',
-  '/static/pwa.js'
+  '/static/pwa.js',
+  '/static/i18n.js'
 ];
 
 self.addEventListener('install',event=>{

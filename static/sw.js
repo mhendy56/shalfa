@@ -1,4 +1,4 @@
-const CACHE_NAME='shalfa-ops-v14-7-lang';
+const CACHE_NAME='shalfa-ops-v14-8-langfix';
 const STATIC_CACHE=[
   '/static/style.css',
   '/static/icon-192.png',

@@ -141,6 +141,43 @@
     'المستخدمون':'Users','صلاحيات المستخدم':'User permissions',
     'تسجيل الدخول':'Sign in','تسجيل الخروج':'Sign out',
     'إعداد: محمد هندي':'Prepared by: Mohammed Hendy'
+
+    'اضغط على المدرسة لعرض بطاقة البيانات الكاملة.':'Click a school to view its full details.',
+    'المدارس الظاهرة':'Visible schools','كل المناطق':'All regions',
+    'كل الأنواع':'All types','كل حالات البواب':'All attendant statuses',
+    'اسم المدرسة أو الرقم الوزاري أو البواب أو المنسق':'Search by school, ministry ID, attendant or coordinator',
+    'مسح البحث':'Clear search','رئيسية':'Main','فرعية':'Branch','ملحقة':'Annex',
+    'الرئيسية':'Home','الفرعية':'Branch','الملحقة':'Annex',
+    'بها بواب':'Attendant assigned','بدون بواب':'No attendant',
+    'خريطة مبسطة':'Simple map','تعذر تحميل بيانات الخريطة':'Unable to load map data',
+    'تسجيل زيارات المشرفين ونقاط التفتيش وGPS.':'Record supervisor visits, checkpoints and GPS locations.',
+    'تسجيل جولة':'Record patrol','وقت الزيارة':'Visit time',
+    'كود نقطة التفتيش':'Checkpoint code','خط العرض':'Latitude','خط الطول':'Longitude',
+    '📍 تحديد الموقع':'📍 Get location','حفظ الجولة':'Save patrol',
+    'تصفية':'Filters','من':'From','إلى':'To','الوقت':'Time',
+    'المشرف':'Supervisor','النقطة':'Checkpoint',
+    'تمت':'Completed','لم تتم':'Not completed','ملاحظة':'Observation',
+    'المنسق / المشرف':'Coordinator / supervisor',
+    'نوع المدرسة':'School type','حجم المدرسة':'School size',
+    'تاريخ التعيين:':'Hire date:','الرقم الوظيفي:':'Employee ID:',
+    'الجوال:':'Mobile:','حالة ربط البواب':'Attendant assignment status',
+    'مرتبط':'Assigned','إدارة البواب':'Manage attendant',
+    'نقل البواب':'Transfer attendant','فك الارتباط':'Unassign attendant',
+    'بيانات المدرسة':'School details','عدد الفصول':'Number of classrooms',
+    'تصنيف الوحدة':'Unit classification','ملكية المبنى':'Building ownership',
+    'الطاقة الاستيعابية':'Capacity','الإدارة التعليمية':'Education administration',
+    'المكتب التعليمي':'Education office','تاريخ الإنشاء':'Establishment date',
+    'حالة المدرسة':'School status','إحداثيات الموقع':'Location coordinates',
+    'رابط الموقع':'Location link','تاريخ الحضور':'Attendance date',
+    'معلومات إضافية':'Additional information',
+    'عرض الموقع على الخريطة':'View on map',
+    'فتح في Google Maps':'Open in Google Maps',
+    'نسخ رابط الموقع':'Copy location link','مشاركة':'Share',
+    'صور المدرسة':'School photos','تعذر تحميل الصورة':'Unable to load image',
+    'لا يوجد رقم جوال مسجل':'No mobile number recorded',
+    'اتصال':'Call','واتساب':'WhatsApp',
+    'نعم':'Yes','لا':'No',
+    'تسجيل زيارات المشرفين ونقاط التفتيش وGPS.':'Record supervisor visits, checkpoints and GPS locations.',
   };
 
   // Display-only transliteration for Arabic proper nouns and free-text records.
@@ -275,7 +312,11 @@
       '.app-brand .shalfa-language-control{margin:8px auto;max-width:200px}'+
       '.shalfa-language-floating{position:fixed;top:12px;inset-inline-end:12px;'+
       'box-shadow:0 3px 16px #081c3533;z-index:1000}'+
-      'html[dir=ltr] .app-sidebar{text-align:left}'+
+      'html[dir=ltr] .app-sidebar{direction:ltr;text-align:left;min-width:245px;width:245px;flex-shrink:0}'+
+      'html[dir=ltr] .app-layout{direction:ltr}'+
+      'html[dir=ltr] .app-main,html[dir=ltr] .content{min-width:0}'+
+      'html[dir=ltr] .app-nav a{display:flex;align-items:center;gap:9px;white-space:normal;overflow-wrap:anywhere}'+
+      'html[dir=ltr] .app-nav a b{min-width:0;overflow-wrap:anywhere}'+
       'html[dir=ltr] .app-nav a{text-align:left}'+
       '@media(max-width:900px){.shalfa-language-floating{top:60px}}';
     document.head.appendChild(css);

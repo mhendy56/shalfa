@@ -1,4 +1,4 @@
-const CACHE_NAME='shalfa-ops-v14-10-map-patrol-en';
+const CACHE_NAME='shalfa-ops-v14-11-visible-lang';
 const STATIC_CACHE=[
   '/static/style.css',
   '/static/icon-192.png',

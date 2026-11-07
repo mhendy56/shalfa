@@ -2,7 +2,7 @@
   // Load the shared language selector on every PWA-enabled screen.
   if (!document.querySelector('script[src*="/static/i18n.js"]')) {
     const languageScript = document.createElement('script');
-    languageScript.src = '/static/i18n.js?v=5';
+    languageScript.src = '/static/i18n.js?v=6';
     languageScript.defer = true;
     document.head.appendChild(languageScript);
   }

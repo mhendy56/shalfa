@@ -140,8 +140,7 @@
     'العدد الإجمالي':'Grand total',
     'المستخدمون':'Users','صلاحيات المستخدم':'User permissions',
     'تسجيل الدخول':'Sign in','تسجيل الخروج':'Sign out',
-    'إعداد: محمد هندي':'Prepared by: Mohammed Hendy'
-
+    'إعداد: محمد هندي':'Prepared by: Mohammed Hendy',
     'اضغط على المدرسة لعرض بطاقة البيانات الكاملة.':'Click a school to view its full details.',
     'المدارس الظاهرة':'Visible schools','كل المناطق':'All regions',
     'كل الأنواع':'All types','كل حالات البواب':'All attendant statuses',

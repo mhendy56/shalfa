@@ -310,15 +310,15 @@
       'font:600 13px Tahoma,Arial,sans-serif;cursor:pointer}'+
       '.login-card .shalfa-language-control{justify-content:center;margin-bottom:16px}'+
       '.app-brand .shalfa-language-control{margin:8px auto;max-width:200px}'+
-      '.shalfa-language-floating{position:fixed;top:12px;inset-inline-end:12px;'+
-      'box-shadow:0 3px 16px #081c3533;z-index:1000}'+
+      '.shalfa-language-floating{position:fixed!important;bottom:18px!important;right:18px!important;left:auto!important;top:auto!important;'+
+      'box-shadow:0 3px 16px #081c3533;z-index:2147483000!important;max-width:calc(100vw - 36px)}'+
       'html[dir=ltr] .app-sidebar{direction:ltr;text-align:left;min-width:245px;width:245px;flex-shrink:0}'+
       'html[dir=ltr] .app-layout{direction:ltr}'+
       'html[dir=ltr] .app-main,html[dir=ltr] .content{min-width:0}'+
       'html[dir=ltr] .app-nav a{display:flex;align-items:center;gap:9px;white-space:normal;overflow-wrap:anywhere}'+
       'html[dir=ltr] .app-nav a b{min-width:0;overflow-wrap:anywhere}'+
       'html[dir=ltr] .app-nav a{text-align:left}'+
-      '@media(max-width:900px){.shalfa-language-floating{top:60px}}';
+      '@media(max-width:900px){.shalfa-language-floating{bottom:12px!important;right:12px!important}}';
     document.head.appendChild(css);
   }
   function addControl() {
@@ -342,12 +342,9 @@
     control.appendChild(icon);
     control.appendChild(select);
     var login = document.querySelector('.login-card');
-    var brand = document.querySelector('.app-sidebar .app-brand');
-    var topbar = document.querySelector('.approved-topbar .topbar-user');
     if (login) login.insertBefore(control, login.firstChild);
-    else if (topbar) topbar.insertBefore(control, topbar.firstChild);
-    else if (brand) brand.appendChild(control);
     else {
+      // Keep the switcher outside clipped sidebars and sticky headers.
       control.classList.add('shalfa-language-floating');
       document.body.appendChild(control);
     }
